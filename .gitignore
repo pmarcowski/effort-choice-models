@@ -20,7 +20,6 @@
 
 # Produced vignettes
 *.html
-*.pdf
 
 # Data
 *.rds
