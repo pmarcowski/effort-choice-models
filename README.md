@@ -147,7 +147,7 @@ Results and plots will be saved in the relevant subdirectory of the `output/` di
 
 ## Models
 
-The study compares several models of effort-based choice:
+The study compares several models of effort-based choice (defined in `models.R`):
 
 1. BASE (Baseline Intercept Model)
 2. SIGM (Sigmoidal Model)
@@ -157,15 +157,6 @@ The study compares several models of effort-based choice:
 6. POWER (Flexible Power Function)
 7. HRST (Heuristic Choice Model)
 8. DPOWER (Dual-system Power Model) - our novel model
-
-The DPOWER model consistently outperformed other candidate models in all conditions.
-
-## Parameters
-
-The analysis scripts use various parameters that can be adjusted to explore different aspects of the data. Key parameters include:
-
-- Model definitions for nonlinear choice models (defined in `models.R`)
-- Cross-validation parameters (e.g., number of folds, repetitions)
 
 The DPOWER model is defined as:
 $$sv(x) = x * [1 - \omega\delta_{1}E^{\gamma_{1}} + (1 - \omega)\delta_{2}E^{\gamma_{2}}]$$
@@ -178,8 +169,6 @@ Where:
 - $\delta_{1}$ and $\delta_{2}$ control the slope of the value function
 - $\gamma_{1}$ and $\gamma_{2}$ individually scale the subsystems
 - $\omega$ determines the weight assigned to each subsystem (0 < $\omega$ < 1)
-
-Refer to individual script files for more details on specific parameters and how to modify them.
 
 ## License
 
