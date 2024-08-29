@@ -43,7 +43,7 @@ The project includes scripts for data preprocessing, statistical analysis using 
 ## Directory Structure
 
 ```
-effort-value-study/
+effort-choice-models/
 │
 ├── R/
 │   ├── helpers.R
