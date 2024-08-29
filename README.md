@@ -103,7 +103,7 @@ No installation is required beyond having R and the necessary libraries. To run 
 
 1. Clone this repository:
    ```
-   git clone https://github.com/username/effort-value-study.git
+   git clone [https://github.com/pmarcowski/effort-value-study.git](https://github.com/pmarcowski/effort-value-study.git)
    ```
 2. Navigate to the project directory:
    ```
