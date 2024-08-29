@@ -1,4 +1,4 @@
-![Figures](featured_figures.png)
+![Preview](preview.png)
 
 # Analyze and model effort-based choice in economic decision-making
 
