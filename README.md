@@ -102,14 +102,18 @@ No installation is required beyond having R and the necessary libraries. To run 
 ## Usage
 
 1. Clone this repository:
+
    ```
    git clone [https://github.com/pmarcowski/effort-value-study.git](https://github.com/pmarcowski/effort-value-study.git)
    ```
-2. Navigate to the project directory:
+   
+3. Navigate to the project directory:
+
    ```
    cd effort-value-study
    ```
-3. Run the R scripts in the root directory in the following order:
+   
+5. Run the R scripts in the root directory in the following order:
    - `preprocess_data.R`
    - `glmm_analysis.R`
    - `model_visualization.R`
