@@ -6,7 +6,7 @@ Dual-Power Model Visualization
 This module provides an interactive web application for visualizing
 the Dual-Power Model of subjective value and effort. It allows users
 to manipulate model parameters and observe their effects on the valuation
-curve, as well as view predefined preference profiles from published papers.
+curve, as well as view predefined preference profiles from publications.
 """
 
 __author__ = "Przemyslaw Marcowski"
@@ -55,19 +55,51 @@ app.index_string = '''
 </html>
 '''
 
-# Define paper parameter configurations
-PAPER_CONFIGS = {
+# Figure 1 parameter presets
+FIGURE1_PRESETS = {
+    'Decreasing': {
+        'δ₁': 0,
+        'δ₂': 2,
+        'γ₁': 0,
+        'γ₂': 2,
+        'ω': 0
+    },
+    'Increasing': {
+        'δ₁': 2,
+        'δ₂': 0,
+        'γ₁': 0.5,
+        'γ₂': 0,
+        'ω': 1
+    },
+    'Decreasing-Increasing': {
+        'δ₁': 3,
+        'δ₂': 3,
+        'γ₁': 15,
+        'γ₂': 3,
+        'ω': 0.5
+    },
+    'Increasing-Decreasing': {
+        'δ₁': 3.5,
+        'δ₂': 3.5,
+        'γ₁': 1,
+        'γ₂': 3,
+        'ω': 0.5
+    }
+}
+
+# Figure 5 parameter presets
+FIGURE5_PRESETS = {
     'Increasing': {
         'δ₁': 12.595,
-        'γ₁': 0.6043103,
-        'δ₂': 0.4693622,
+        'γ₁': 0.4693622,
+        'δ₂': 0.6043103,
         'γ₂': 0.469386,
         'ω': 0.1462272
     },
     'Decreasing-Increasing': {
         'δ₁': 9.522435,
-        'γ₁': 10.58172,
-        'δ₂': 1.901854,
+        'γ₁': 1.901854,
+        'δ₂': 10.58172,
         'γ₂': 1.491141,
         'ω': 0.4928382
     },
@@ -80,8 +112,8 @@ PAPER_CONFIGS = {
     },
     'Increasing-Decreasing': {
         'δ₁': 3.492561,
-        'γ₁': 2.43447,
-        'δ₂': 3.258896,
+        'γ₁': 3.258896,
+        'δ₂': 2.43447,
         'γ₂': 25.08094,
         'ω': 0.382991
     }
@@ -109,7 +141,7 @@ param_bounds = {
 def create_parameter_input(param_name, param_label, min_value, max_value,
                            default_value, step):
     """Create a parameter input control with label and description,
-    including increment/decrement buttons."""
+    including increment/decrement buttons and bounds labels"""
     descriptions = {
         'ω': 'System weight',
         'δ₁': 'Positive steepness',
@@ -143,6 +175,7 @@ def create_parameter_input(param_name, param_label, min_value, max_value,
             html.Div(
                 style={'display': 'flex', 'alignItems': 'center'},
                 children=[
+                    html.Label(f"{min_value}", style={'marginRight': '5px'}),
                     html.Button(
                         '-',
                         id=f'{param_name}-decrement',
@@ -154,14 +187,12 @@ def create_parameter_input(param_name, param_label, min_value, max_value,
                         type='number',
                         min=min_value,
                         max=max_value,
-                        step='any',
+                        step=step,
                         value=default_value,
                         style={
                             'width': '80px',
                             'textAlign': 'center'
-                            # Hide spinner arrows via CSS in app.index_string
                         },
-                        debounce=True,
                         persistence=True,
                         required=False
                     ),
@@ -171,6 +202,7 @@ def create_parameter_input(param_name, param_label, min_value, max_value,
                         n_clicks=0,
                         style={'marginLeft': '5px'}
                     ),
+                    html.Label(f"{max_value}", style={'marginLeft': '5px'}),
                 ]
             )
         ]
@@ -290,13 +322,13 @@ app.layout = html.Div(
                             'This application visualizes the Dual-Power Model of '
                             'subjective value and effort. Adjust the parameters to see '
                             'how they affect the valuation curve. You can also view '
-                            'predefined preference profiles from published papers.'
+                            'predefined preference profiles from the manuscript.'
                         )
                     ]
                 )
             ]
         ),
-        dcc.Store(id='toggle-state', data=False),
+        dcc.Store(id='display-mode', data='custom'),
         html.Div(
             style={
                 'display': 'flex',
@@ -362,7 +394,26 @@ app.layout = html.Div(
                             children=parameter_controls
                         ),
                         html.Button(
-                            id='toggle-button',
+                            'Show Figure 1 Values',
+                            id='show-figure1-button',
+                            n_clicks=0,
+                            style={
+                                'marginBottom': '10px',
+                                'width': '100%'
+                            }
+                        ),
+                        html.Button(
+                            'Show Figure 5 Values',
+                            id='show-figure5-button',
+                            n_clicks=0,
+                            style={
+                                'marginBottom': '10px',
+                                'width': '100%'
+                            }
+                        ),
+                        html.Button(
+                            'Show Custom Values',
+                            id='show-custom-button',
                             n_clicks=0,
                             style={
                                 'marginBottom': '20px',
@@ -378,24 +429,24 @@ app.layout = html.Div(
 
 
 @app.callback(
-    Output('toggle-button', 'children'),
-    Input('toggle-state', 'data')
+    Output('display-mode', 'data'),
+    Input('show-figure1-button', 'n_clicks'),
+    Input('show-figure5-button', 'n_clicks'),
+    Input('show-custom-button', 'n_clicks')
 )
-def update_button_text(toggle_state):
-    """Update the toggle button text based on state."""
-    return 'Show Custom Values' if toggle_state else 'Show Paper Results'
-
-
-@app.callback(
-    Output('toggle-state', 'data'),
-    Input('toggle-button', 'n_clicks'),
-    State('toggle-state', 'data')
-)
-def toggle_paper_configs(n_clicks, toggle_state):
-    """Toggle between paper configurations and custom values."""
-    if n_clicks is None:
-        return toggle_state
-    return not toggle_state
+def update_display_mode(n_clicks_fig1, n_clicks_fig5, n_clicks_custom):
+    """Update display mode based on button clicks"""
+    ctx = dash.callback_context
+    if not ctx.triggered:
+        return 'custom'
+    button_id = ctx.triggered[0]['prop_id'].split('.')[0]
+    if button_id == 'show-figure1-button':
+        return 'figure1'
+    elif button_id == 'show-figure5-button':
+        return 'figure5'
+    elif button_id == 'show-custom-button':
+        return 'custom'
+    return 'custom'
 
 
 @app.callback(
@@ -408,36 +459,28 @@ def toggle_paper_configs(n_clicks, toggle_state):
     Input('γ₁-input', 'value'),
     Input('δ₂-input', 'value'),
     Input('γ₂-input', 'value'),
-    Input('toggle-state', 'data')
+    Input('display-mode', 'data')
 )
-def update_plot_and_values(omega, delta1, gamma1, delta2, gamma2, toggle_state):
-    """Update the plot and values based on parameter inputs."""
-    # Handle None values
-    omega = omega if omega is not None else default_params['ω']
-    delta1 = delta1 if delta1 is not None else default_params['δ₁']
-    gamma1 = gamma1 if gamma1 is not None else default_params['γ₁']
-    delta2 = delta2 if delta2 is not None else default_params['δ₂']
-    gamma2 = gamma2 if gamma2 is not None else default_params['γ₂']
-
-    # Convert to float
-    omega = float(omega)
-    delta1 = float(delta1)
-    gamma1 = float(gamma1)
-    delta2 = float(delta2)
-    gamma2 = float(gamma2)
-
+def update_plot_and_values(omega_input, delta1_input, gamma1_input,
+                           delta2_input, gamma2_input, display_mode):
+    """Update the plot and values based on parameter inputs and display mode"""
     E = np.linspace(0, 1, 100)
     X = 1
-
-    # Calculate Subjective Value
-    SV = X * (1 + (omega * (delta1 * E ** gamma1) -
-               (1 - omega) * (delta2 * E ** gamma2)))
-
-    # Create plot
     traces = []
 
-    if not toggle_state:
-        # Show single black line for current parameters
+    if display_mode == 'custom':
+        # Handle None values
+        omega = float(omega_input) if omega_input is not None else default_params['ω']
+        delta1 = float(delta1_input) if delta1_input is not None else default_params['δ₁']
+        gamma1 = float(gamma1_input) if gamma1_input is not None else default_params['γ₁']
+        delta2 = float(delta2_input) if delta2_input is not None else default_params['δ₂']
+        gamma2 = float(gamma2_input) if gamma2_input is not None else default_params['γ₂']
+
+        # Compute SV
+        SV = X * (1 + (omega * (delta1 * E ** gamma1) -
+                       (1 - omega) * (delta2 * E ** gamma2)))
+
+        # Create plot
         traces.append(
             go.Scatter(
                 x=E,
@@ -447,49 +490,69 @@ def update_plot_and_values(omega, delta1, gamma1, delta2, gamma2, toggle_state):
                 line=dict(color='black')
             )
         )
-        # Display current parameters horizontally
+
         current_params = (
             f"X=1, ω={omega:.3f}, δ₁={delta1:.3f}, γ₁={gamma1:.3f}, "
             f"δ₂={delta2:.3f}, γ₂={gamma2:.3f}"
         )
+
+        # Compute system values at E=0.5
+        E_mid = 0.5
+        positive_system = omega * (delta1 * E_mid ** gamma1)
+        negative_system = -(1 - omega) * (delta2 * E_mid ** gamma2)
+
+        system_values = html.Div([
+            html.H4('System Values at E=0.5:'),
+            html.P([
+                "Positive System (ω·(δ₁·E^γ₁)): ",
+                html.Span(
+                    f"{positive_system:+.3f}",
+                    style={'fontWeight': 'bold', 'color': 'green'}
+                )
+            ]),
+            html.P([
+                "Negative System (-(1-ω)·(δ₂·E^γ₂)): ",
+                html.Span(
+                    f"{negative_system:+.3f}",
+                    style={'fontWeight': 'bold', 'color': 'red'}
+                )
+            ])
+        ])
+
         paper_config_display = ''
-    else:
-        # Show all paper configurations
+
+    elif display_mode == 'figure1':
+        # Use FIGURE1_PRESETS
         colors = ['red', 'green', 'blue', 'purple']
-        paper_params_list = [
-            html.H4(
-                'Preference Profiles:',
-                style={'marginTop': '0px', 'marginBottom': '10px'}
-            )
-        ]
+        labels = ['Decreasing', 'Increasing', 'Decreasing-Increasing', 'Increasing-Decreasing']
+        params_list = [html.H4('Figure 1 Presets:')]
 
-        for idx, (config_name, params) in enumerate(PAPER_CONFIGS.items()):
-            delta1_paper = params['δ₁']
-            gamma1_paper = params['γ₁']
-            delta2_paper = params['δ₂']
-            gamma2_paper = params['γ₂']
-            omega_paper = params['ω']
+        for idx, label in enumerate(labels):
+            params = FIGURE1_PRESETS[label]
+            delta1 = params['δ₁']
+            delta2 = params['δ₂']
+            gamma1 = params['γ₁']
+            gamma2 = params['γ₂']
+            omega = params['ω']
 
-            SV_paper = X * (1 + (
-                omega_paper * (delta1_paper * E ** gamma1_paper) -
-                (1 - omega_paper) * (delta2_paper * E ** gamma2_paper)
-            ))
+            SV = X * (1 + (omega * (delta1 * E ** gamma1) -
+                           (1 - omega) * (delta2 * E ** gamma2)))
 
             traces.append(
                 go.Scatter(
                     x=E,
-                    y=SV_paper,
+                    y=SV,
                     mode='lines',
-                    name=config_name,
+                    name=label,
                     line=dict(color=colors[idx % len(colors)])
                 )
             )
 
-            # Format parameter values for display
-            paper_params_list.append(
+            # Add parameters to display
+            params_list.append(
                 html.Div([
                     html.H5(
-                        config_name,
+                        label,
                         style={
                             'marginBottom': '5px',
                             'marginTop': '15px',
@@ -497,16 +560,65 @@ def update_plot_and_values(omega, delta1, gamma1, delta2, gamma2, toggle_state):
                         }
                     ),
                     html.P(
-                        f"X=1, ω={omega_paper:.3f}, δ₁={delta1_paper:.3f}, "
-                        f"γ₁={gamma1_paper:.3f}, δ₂={delta2_paper:.3f}, "
-                        f"γ₂={gamma2_paper:.3f}",
+                        f"X=1, ω={omega:.3f}, δ₁={delta1:.3f}, γ₁={gamma1:.3f}, "
+                        f"δ₂={delta2:.3f}, γ₂={gamma2:.3f}",
                         style={'whiteSpace': 'nowrap'}
                     )
                 ])
             )
 
         current_params = ''
-        paper_config_display = paper_params_list
+        system_values = ''
+        paper_config_display = params_list
+
+    elif display_mode == 'figure5':
+        # Use FIGURE5_PRESETS
+        colors = ['red', 'green', 'blue', 'purple']
+        labels = ['Decreasing', 'Increasing', 'Decreasing-Increasing', 'Increasing-Decreasing']
+        params_list = [html.H4('Figure 5 Presets:')]
+
+        for idx, label in enumerate(labels):
+            params = FIGURE5_PRESETS[label]
+            delta1 = params['δ₁']
+            delta2 = params['δ₂']
+            gamma1 = params['γ₁']
+            gamma2 = params['γ₂']
+            omega = params['ω']
+
+            SV = X * (1 + (omega * (delta1 * E ** gamma1) -
+                           (1 - omega) * (delta2 * E ** gamma2)))
+
+            traces.append(
+                go.Scatter(
+                    x=E,
+                    y=SV,
+                    mode='lines',
+                    name=label,
+                    line=dict(color=colors[idx % len(colors)])
+                )
+            )
+
+            params_list.append(
+                html.Div([
+                    html.H5(
+                        label,
+                        style={
+                            'marginBottom': '5px',
+                            'marginTop': '15px',
+                            'color': colors[idx % len(colors)]
+                        }
+                    ),
+                    html.P(
+                        f"X=1, ω={omega:.3f}, δ₁={delta1:.3f}, γ₁={gamma1:.3f}, "
+                        f"δ₂={delta2:.3f}, γ₂={gamma2:.3f}",
+                        style={'whiteSpace': 'nowrap'}
+                    )
+                ])
+            )
+
+        current_params = ''
+        system_values = ''
+        paper_config_display = params_list
 
     # Create figure
     figure = {
@@ -521,37 +633,17 @@ def update_plot_and_values(omega, delta1, gamma1, delta2, gamma2, toggle_state):
         )
     }
 
-    # System values
-    if not toggle_state:
-        E1 = 0.5
-        positive_system = omega * (delta1 * E1 ** gamma1)
-        negative_system = -(1 - omega) * (delta2 * E1 ** gamma2)
-
-        system_values = html.Div([
-            html.H4('System Values at E=0.5:'),
-            html.P([
-                "Positive System (ω·(δ₁·E^γ₁)): ",
-                html.Span(
-                    f"+{positive_system:.3f}",
-                    style={'fontWeight': 'bold', 'color': 'green'}
-                )
-            ]),
-            html.P([
-                "Negative System (-(1-ω)·(δ₂·E^γ₂)): ",
-                html.Span(
-                    f"{negative_system:.3f}",
-                    style={'fontWeight': 'bold', 'color': 'red'}
-                )
-            ])
-        ])
-    else:
-        system_values = ''
-
     return figure, current_params, system_values, paper_config_display
 
 
 # Callbacks for increment and decrement buttons
-increment = 0.1  # Increment/decrement value
+increment_values = {
+    'ω': 0.1,
+    'δ₁': 0.1,
+    'γ₁': 0.1,
+    'δ₂': 0.1,
+    'γ₂': 0.1
+}
 
 
 def create_increment_decrement_callback(param_name):
@@ -568,6 +660,7 @@ def create_increment_decrement_callback(param_name):
             return current_value
 
         button_id = ctx.triggered[0]['prop_id'].split('.')[0]
+        increment = increment_values[param_name]
         new_value = current_value
         if button_id == f'{param_name}-increment':
             new_value += increment
@@ -597,6 +690,7 @@ for param in ['ω', 'δ₁', 'γ₁', 'δ₂', 'γ₂']:
     [State('info-modal', 'style')]
 )
 def toggle_info_modal(open_clicks, close_clicks, current_style):
+    """Toggle the display of the info modal"""
     if current_style is None:
         current_style = {'display': 'none'}
     ctx = dash.callback_context
