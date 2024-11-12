@@ -645,7 +645,7 @@ def update_plot_and_values(omega_input, delta1_input, gamma1_input,
             params_list.append(
                 html.Div([
                     html.H5(
-                        label,
+                        f"{label} Profile",
                         style={
                             'marginBottom': '5px',
                             'marginTop': '15px',
