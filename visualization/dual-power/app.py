@@ -239,25 +239,24 @@ app.layout = html.Div(
         html.Div(
             style={
                 'position': 'relative',
-                'marginBottom': '30px'
+                'marginBottom': '30px',
+                'display': 'flex',
+                'justifyContent': 'center',
+                'alignItems': 'center',
+                'gap': '10px'
             },
             children=[
                 html.H2(
                     'Dual-Power Model Visualization',
                     style={
-                        'textAlign': 'center',
-                        'marginBottom': '0'
+                        'margin': '0'
                     }
                 ),
-                # Info Icon
                 html.Button(
                     'i',
                     id='info-button',
                     n_clicks=0,
                     style={
-                        'position': 'absolute',
-                        'right': '0',
-                        'top': '0',
                         'backgroundColor': 'white',
                         'border': '2px solid black',
                         'borderRadius': '50%',
@@ -272,10 +271,9 @@ app.layout = html.Div(
                         'color': 'black',
                         'lineHeight': '26px'
                     }
-                ),
+                )
             ]
         ),
-        # Info Modal
         html.Div(
             id='info-modal',
             style={
@@ -337,7 +335,7 @@ app.layout = html.Div(
                 'gap': '40px'
             },
             children=[
-                # Left: Plot
+                # Left: Plot and Figure Description
                 html.Div(
                     style={'width': '600px', 'flexShrink': 0},
                     children=[
@@ -345,6 +343,14 @@ app.layout = html.Div(
                             id='sv-plot',
                             config={'displayModeBar': False},
                             style={'width': '600px', 'height': '600px'}
+                        ),
+                        html.Div(
+                            id='figure-description',
+                            style={
+                                'marginTop': '20px',
+                                'fontSize': '14px',
+                                'textAlign': 'justify'
+                            }
                         )
                     ]
                 ),
@@ -360,7 +366,7 @@ app.layout = html.Div(
                     children=[
                         html.H4('Equation:'),
                         html.P(
-                            "SV = X·[1 + (ω·(δ₁·E^γ₁) - (1-ω)·(δ₂·E^γ₂))]",
+                            "sv(x) = x·[1 + (ω·(δ₁·E^γ₁) - (1-ω)·(δ₂·E^γ₂))]",
                             style={
                                 'fontSize': '16px',
                                 'whiteSpace': 'nowrap'
@@ -381,6 +387,32 @@ app.layout = html.Div(
                         html.Div(
                             id='paper-config-display',
                             style={'fontSize': '14px'}
+                        ),
+                        html.Div(
+                            style={
+                                'marginTop': '40px',
+                                'paddingTop': '20px',
+                                'borderTop': '1px solid #eee'
+                            },
+                            children=[
+                                html.H4('where:'),
+                                html.Ul(
+                                    style={
+                                        'listStyleType': 'none',
+                                        'margin': '0',
+                                        'paddingLeft': '50px'
+                                    },
+                                    children=[
+                                        html.Li('x: nominal outcome value'),
+                                        html.Li('E: level of effort'),
+                                        html.Li('ω: system weight'),
+                                        html.Li('δ₁: steepness of the positive system'),
+                                        html.Li('γ₁: curvature of the positive system'),
+                                        html.Li('δ₂: steepness of the negative system'),
+                                        html.Li('γ₂: curvature of the negative system')
+                                    ]
+                                )
+                            ]
                         )
                     ]
                 ),
@@ -450,23 +482,25 @@ def update_display_mode(n_clicks_fig1, n_clicks_fig5, n_clicks_custom):
 
 
 @app.callback(
-    Output('sv-plot', 'figure'),
-    Output('current-params', 'children'),
-    Output('system-values', 'children'),
-    Output('paper-config-display', 'children'),
-    Input('ω-input', 'value'),
-    Input('δ₁-input', 'value'),
-    Input('γ₁-input', 'value'),
-    Input('δ₂-input', 'value'),
-    Input('γ₂-input', 'value'),
-    Input('display-mode', 'data')
+    [Output('sv-plot', 'figure'),
+     Output('current-params', 'children'),
+     Output('system-values', 'children'),
+     Output('paper-config-display', 'children'),
+     Output('figure-description', 'children')],
+    [Input('ω-input', 'value'),
+     Input('δ₁-input', 'value'),
+     Input('γ₁-input', 'value'),
+     Input('δ₂-input', 'value'),
+     Input('γ₂-input', 'value'),
+     Input('display-mode', 'data')]
 )
 def update_plot_and_values(omega_input, delta1_input, gamma1_input,
                            delta2_input, gamma2_input, display_mode):
     """Update the plot and values based on parameter inputs and display mode"""
     E = np.linspace(0, 1, 100)
-    X = 1
+    x = 1
     traces = []
+    figure_description = ''  # Initialize empty description
 
     if display_mode == 'custom':
         # Handle None values
@@ -476,15 +510,14 @@ def update_plot_and_values(omega_input, delta1_input, gamma1_input,
         delta2 = float(delta2_input) if delta2_input is not None else default_params['δ₂']
         gamma2 = float(gamma2_input) if gamma2_input is not None else default_params['γ₂']
 
-        # Compute SV
-        SV = X * (1 + (omega * (delta1 * E ** gamma1) -
+        # Compute sv(x)
+        sv = x * (1 + (omega * (delta1 * E ** gamma1) -
                        (1 - omega) * (delta2 * E ** gamma2)))
 
-        # Create plot
         traces.append(
             go.Scatter(
                 x=E,
-                y=SV,
+                y=sv,
                 mode='lines',
                 name='Current Parameters',
                 line=dict(color='black')
@@ -492,7 +525,7 @@ def update_plot_and_values(omega_input, delta1_input, gamma1_input,
         )
 
         current_params = (
-            f"X=1, ω={omega:.3f}, δ₁={delta1:.3f}, γ₁={gamma1:.3f}, "
+            f"x=1, ω={omega:.3f}, δ₁={delta1:.3f}, γ₁={gamma1:.3f}, "
             f"δ₂={delta2:.3f}, γ₂={gamma2:.3f}"
         )
 
@@ -520,9 +553,16 @@ def update_plot_and_values(omega_input, delta1_input, gamma1_input,
         ])
 
         paper_config_display = ''
+        
+        figure_description = html.P([
+            html.Strong("Interactive Mode."), 
+            " Adjust the parameters using the controls on the right to explore \
+              different value function shapes. The positive system (green) \
+              and negative system (red) values at E=0.5 are shown in the middle panel. \
+              Parameters can be modified using the +/- buttons or by directly entering values."
+              ])
 
     elif display_mode == 'figure1':
-        # Use FIGURE1_PRESETS
         colors = ['red', 'green', 'blue', 'purple']
         labels = ['Decreasing', 'Increasing', 'Decreasing-Increasing', 'Increasing-Decreasing']
         params_list = [html.H4('Figure 1 Presets:')]
@@ -535,24 +575,23 @@ def update_plot_and_values(omega_input, delta1_input, gamma1_input,
             gamma2 = params['γ₂']
             omega = params['ω']
 
-            SV = X * (1 + (omega * (delta1 * E ** gamma1) -
+            sv = x * (1 + (omega * (delta1 * E ** gamma1) -
                            (1 - omega) * (delta2 * E ** gamma2)))
 
             traces.append(
                 go.Scatter(
                     x=E,
-                    y=SV,
+                    y=sv,
                     mode='lines',
                     name=label,
                     line=dict(color=colors[idx % len(colors)])
                 )
             )
 
-            # Add parameters to display
             params_list.append(
                 html.Div([
                     html.H5(
-                        label,
+                        f"{label} Profile",
                         style={
                             'marginBottom': '5px',
                             'marginTop': '15px',
@@ -560,7 +599,7 @@ def update_plot_and_values(omega_input, delta1_input, gamma1_input,
                         }
                     ),
                     html.P(
-                        f"X=1, ω={omega:.3f}, δ₁={delta1:.3f}, γ₁={gamma1:.3f}, "
+                        f"x=1, ω={omega:.3f}, δ₁={delta1:.3f}, γ₁={gamma1:.3f}, "
                         f"δ₂={delta2:.3f}, γ₂={gamma2:.3f}",
                         style={'whiteSpace': 'nowrap'}
                     )
@@ -570,9 +609,14 @@ def update_plot_and_values(omega_input, delta1_input, gamma1_input,
         current_params = ''
         system_values = ''
         paper_config_display = params_list
+        figure_description = html.P([
+            html.Strong("Figure 1."), 
+            " Model explanation of different effort preference profiles. \
+             Example value function shapes that illustrate the different \
+             preference profiles accounted for under the Dual-Power (DPOWER) model."
+        ])
 
     elif display_mode == 'figure5':
-        # Use FIGURE5_PRESETS
         colors = ['red', 'green', 'blue', 'purple']
         labels = ['Decreasing', 'Increasing', 'Decreasing-Increasing', 'Increasing-Decreasing']
         params_list = [html.H4('Figure 5 Presets:')]
@@ -585,13 +629,13 @@ def update_plot_and_values(omega_input, delta1_input, gamma1_input,
             gamma2 = params['γ₂']
             omega = params['ω']
 
-            SV = X * (1 + (omega * (delta1 * E ** gamma1) -
+            sv = x * (1 + (omega * (delta1 * E ** gamma1) -
                            (1 - omega) * (delta2 * E ** gamma2)))
 
             traces.append(
                 go.Scatter(
                     x=E,
-                    y=SV,
+                    y=sv,
                     mode='lines',
                     name=label,
                     line=dict(color=colors[idx % len(colors)])
@@ -609,7 +653,7 @@ def update_plot_and_values(omega_input, delta1_input, gamma1_input,
                         }
                     ),
                     html.P(
-                        f"X=1, ω={omega:.3f}, δ₁={delta1:.3f}, γ₁={gamma1:.3f}, "
+                        f"x=1, ω={omega:.3f}, δ₁={delta1:.3f}, γ₁={gamma1:.3f}, "
                         f"δ₂={delta2:.3f}, γ₂={gamma2:.3f}",
                         style={'whiteSpace': 'nowrap'}
                     )
@@ -619,6 +663,15 @@ def update_plot_and_values(omega_input, delta1_input, gamma1_input,
         current_params = ''
         system_values = ''
         paper_config_display = params_list
+        figure_description = html.P([
+            html.Strong("Figure 5."), 
+            " Example value functions based on individual parameter estimates \
+              of the Dual-Power (DPOWER) model. Shown are value functions that \
+              decrease or increase monotonically (decreasing or increasing profile, \
+              respectively), or initially decrease or increase and then reverse \
+              in evaluation after given effort is reached (decreasing-increasing \
+              or increasing-decreasing profile)."
+        ])
 
     # Create figure
     figure = {
@@ -633,7 +686,7 @@ def update_plot_and_values(omega_input, delta1_input, gamma1_input,
         )
     }
 
-    return figure, current_params, system_values, paper_config_display
+    return figure, current_params, system_values, paper_config_display, figure_description
 
 
 # Callbacks for increment and decrement buttons
