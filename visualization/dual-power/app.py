@@ -20,7 +20,7 @@ from dash.dependencies import Input, Output, State
 import plotly.graph_objs as go
 
 # Initialize app
-app = dash.Dash(__name__)
+app = dash.Dash(__name__, title="Model Visualizer")
 server = app.server
 
 # Modify index string to include custom CSS
