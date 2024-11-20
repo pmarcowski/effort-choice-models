@@ -354,16 +354,21 @@ app.layout = html.Div(
                                     style={
                                         "listStyleType": "none",
                                         "margin": "0",
-                                        "paddingLeft": "50px",
+                                        "paddingLeft": "40px",
                                     },
                                     children=[
-                                        html.Li("x: nominal outcome value"),
-                                        html.Li("E: level of effort"),
-                                        html.Li("ω: system weight"),
-                                        html.Li("δ₁: steepness of the positive system"),
-                                        html.Li("γ₁: curvature of the positive system"),
-                                        html.Li("δ₂: steepness of the negative system"),
-                                        html.Li("γ₂: curvature of the negative system"),
+                                        html.Li(
+                                            "sv(x): subjective value relative to nominal value"
+                                        ),
+                                        html.Li("x: nominal value of outcome"),
+                                        html.Li(
+                                            "E: effort level as proportion of max effort"
+                                        ),
+                                        html.Li("ω: relative system weight"),
+                                        html.Li("δ₁: steepness of positive system"),
+                                        html.Li("γ₁: curvature of positive system"),
+                                        html.Li("δ₂: steepness of negative system"),
+                                        html.Li("γ₂: curvature of negative system"),
                                     ],
                                 ),
                             ],
@@ -514,13 +519,14 @@ def update_plot_and_values(
         E_mid = 0.5
         positive_contribution = omega * (delta1 * E_mid**gamma1)
         negative_contribution = -(1 - omega) * (delta2 * E_mid**gamma2)
+        net_effect = positive_contribution + negative_contribution
 
         system_values = html.Div(
             [
                 html.H4("System Values at E=0.5:"),
                 html.P(
                     [
-                        "Positive System (ω·(δ₁·E^γ₁)): ",
+                        "Weighted Positive System (ω·(δ₁·E^γ₁)): ",
                         html.Span(
                             f"{positive_contribution:+.3f}",
                             style={"fontWeight": "bold", "color": "green"},
@@ -529,10 +535,19 @@ def update_plot_and_values(
                 ),
                 html.P(
                     [
-                        "Negative System (-(1-ω)·(δ₂·E^γ₂)): ",
+                        "Weighted Negative System (-(1-ω)·(δ₂·E^γ₂)): ",
                         html.Span(
                             f"{negative_contribution:+.3f}",
                             style={"fontWeight": "bold", "color": "red"},
+                        ),
+                    ]
+                ),
+                html.P(
+                    [
+                        "Net System Effect: ",
+                        html.Span(
+                            f"{net_effect:.3f}",
+                            style={"fontWeight": "bold"},
                         ),
                     ]
                 ),
@@ -545,7 +560,7 @@ def update_plot_and_values(
             [
                 html.Strong("Interactive Mode."),
                 " Adjust the parameters using the controls on the right to explore \
-              different value function shapes. The positive system (green) \
+              different value function shapes. The weighted positive system (green) \
               and negative system (red) values at E=0.5 are shown in the middle panel. \
               Parameters can be modified using the +/- buttons or by directly entering values. \
               The plot shows individual contributions of the positive (green) and negative (red) \
@@ -690,7 +705,10 @@ def update_plot_and_values(
     figure = {
         "data": traces,
         "layout": go.Layout(
-            xaxis={"title": "Effort", "range": [0, 1]},
+            xaxis={
+                "title": "Level of Effort",
+                "range": [0, 1],
+            },
             yaxis={"title": "Subjective Value"},
             showlegend=False,
             width=600,
