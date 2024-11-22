@@ -184,7 +184,7 @@ for param in ["ω", "δ₁", "γ₁", "δ₂", "γ₂"]:
     min_value = param_bounds[param]["min"]
     max_value = param_bounds[param]["max"]
     default_value = default_params[param]
-    step = 0.1
+    step = 0.001
     control = create_parameter_input(
         param_name=param,
         param_label=param,
