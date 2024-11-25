@@ -478,7 +478,7 @@ def update_plot_and_values(
                 y=positive_system,
                 mode="lines",
                 name="Positive System",
-                line=dict(color="green", width=2),
+                line=dict(color="green", width=2, dash="dash"),
                 opacity=0.5,
             )
         )
@@ -491,7 +491,7 @@ def update_plot_and_values(
                 y=negative_system,
                 mode="lines",
                 name="Negative System",
-                line=dict(color="red", width=2),
+                line=dict(color="red", width=2, dash="dash"),
                 opacity=0.5,
             )
         )
