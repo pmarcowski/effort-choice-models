@@ -1,133 +1,126 @@
-# Title: Toolbox of helper functions for effort and value study
-# Author: Przemyslaw Marcowski, PhD
-# Email: p.marcowski@gmail.com
-# Date: 2023-05-12
-# Copyright (c) 2023 Przemyslaw Marcowski
+#' Helper Functions for Analysis Pipeline
+#'
+#' @description
+#' Collection of utility functions supporting the analysis pipeline.
+#' Functions include:
+#' - Pattern detection and change point analysis
+#' - Agent simulation for PEST procedure
+#' - Parameter transformation and normalization
+#' - Power analysis and visualization helpers
+#'
+#' @author Przemyslaw Marcowski, PhD p.marcowski@gmail.com
+#' @date 2023-05-12
+#' @copyright (c) 2023 Przemyslaw Marcowski
 
-# This code is licensed under the MIT license found in the
-# LICENSE file in the root directory of this source tree.
-
-count_changepoints <- function(x) {
-  # Counts the number of changepoints in a numeric vector.
-  # A changepoint is a position at which the vector changes from increasing to decreasing, or vice versa.
-  #
-  # Args:
-  #   x: Numeric vector
-  #
-  # Returns:
-  #   The number of changepoints in the input vector.
-
+#' Analyze Value Function Sequences
+#'
+#' Helper function that analyzes sequence patterns and changepoints.
+#' @param x Numeric vector
+#' @param tol Numeric tolerance for equality comparison (default: sqrt(.Machine$double.eps))
+#' @return List containing sequence patterns and changepoint count
+get_sequence_patterns <- function(x, tol = sqrt(.Machine$double.eps)) {
+  # Input validation
+  if (!is.numeric(x)) stop("'x' must be a numeric vector")
+  if (length(x) < 2) return(list(sequences = NA_character_, changepoints = 0))
+  
   n <- length(x)
-  if (n < 2) {
-    stop("'x' must be a vector of length greater than 1")
-  }
-
-  # Initialize the count of changepoints and the current sequence
+  sequences <- character(n - 1)
   changepoints <- 0
-
-  # Define current_sequence based on the first two elements
-  if (x[2] > x[1]) {
-    current_sequence <- "increasing"
-  } else if (x[2] < x[1]) {
-    current_sequence <- "decreasing"
-  } else {
-    current_sequence <- "equal"
+  
+  # Find first non-equal sequence using tolerance
+  i <- 1
+  while (i < n && abs(x[i + 1] - x[i]) < tol) {
+    sequences[i] <- "equal"
+    i <- i + 1
   }
-
-  # Iterate over each element in the vector starting from the third one
-  for (i in 3:n) {
-    # If the current number is greater than the previous one and the current sequence is not "increasing"
-    if (x[i] > x[i - 1] && current_sequence != "increasing") {
-      current_sequence <- "increasing"
-      changepoints <- changepoints + 1
+  
+  # Handle edge case where all values are equal
+  if (i == n) {
+    return(list(
+      sequences = "equal",
+      changepoints = 0
+    ))
+  }
+  
+  # Initialize sequence based on first non-equal pair
+  current_sequence <- if (x[i + 1] > x[i]) "increasing" else "decreasing"
+  sequences[i] <- current_sequence
+  
+  # Analyze remaining elements
+  for (j in (i + 2):n) {
+    diff <- x[j] - x[j - 1]
+    
+    if (abs(diff) < tol) {
+      sequences[j - 1] <- "equal"
+      next
     }
-
-    # If the current number is less than the previous one and the current sequence is not "decreasing"
-    else if (x[i] < x[i - 1] && current_sequence != "decreasing") {
-      current_sequence <- "decreasing"
+    
+    new_sequence <- if (diff > 0) "increasing" else "decreasing"
+    sequences[j - 1] <- new_sequence
+    
+    if (new_sequence != current_sequence) {
       changepoints <- changepoints + 1
+      current_sequence <- new_sequence
     }
   }
-
-  return(changepoints)
+  
+  # Clean up sequences by removing consecutive duplicates
+  clean_sequences <- rle(sequences)$values
+  
+  return(list(
+    sequences = clean_sequences,
+    changepoints = changepoints
+  ))
 }
 
-detect_sequences <- function(x) {
-  # Takes a numeric vector and detects strictly increasing,
-  # strictly decreasing, and equal sequences. It returns a character string
-  # that corresponds to the order of these sequences, i.e., "increasing-decreasing"
-  # if the vector first increases and then decreases; "increasing" if it simply increases;
-  # "decreasing" if it simply decreases; or "equal" if all elements are the same.
-  #
-  # Args:
-  #   x: A numeric vector.
-  #
-  # Returns:
-  #   Character string that describes the sequence of the vector ("increasing",
-  #   "decreasing", "increasing-decreasing", "decreasing-increasing", or "equal").
-
-  if (length(x) < 2) {
-    return(NA)
-  } # Handle short vectors
-
-  # Initialize empty vector for sequence
-  sequence <- c()
-
-  # Iterate over each element in vector
-  for (i in 2:length(x)) {
-    # Check for increasing sequence
-    if (x[i] > x[i - 1]) {
-      sequence <- c(sequence, "increasing")
+#' Detect Value Function Pattern Type
+#'
+#' Analyzes sequence patterns in value functions to classify their shape.
+#'
+#' @param x Numeric vector of values
+#' @return Character string: "increasing", "decreasing", "increasing-decreasing",
+#'         "decreasing-increasing", or "equal"
+get_sequence_profile <- function(x) {
+  result <- get_sequence_patterns(x)
+  if (is.na(result$sequences[1])) return(NA_character_)
+  
+  # Remove any "equal" sequences for pattern determination
+  sequence <- result$sequences[result$sequences != "equal"]
+  
+  # Handle case where all values were equal
+  if (length(sequence) == 0) return("equal")
+  
+  # Handle single direction cases
+  if (length(sequence) == 1) {
+    return(sequence)
+  }
+  
+  # Handle two-direction cases
+  if (length(sequence) == 2) {
+    if (sequence[1] == "increasing" && sequence[2] == "decreasing") {
+      return("increasing-decreasing")
     }
-
-    # Check for decreasing sequence
-    else if (x[i] < x[i - 1]) {
-      sequence <- c(sequence, "decreasing")
-    }
-
-    # Check for equal sequence
-    else {
-      sequence <- c(sequence, "equal")
+    if (sequence[1] == "decreasing" && sequence[2] == "increasing") {
+      return("decreasing-increasing")
     }
   }
-
-  # Remove consecutive duplicates using run length encoding
-  sequence <- rle(sequence)$values
-
-  # Initialize result
-  result <- ""
-
-  # Determine result based on sequence patterns
-  if (all(sequence == "increasing")) {
-    result <- "increasing"
-  } else if (all(sequence == "decreasing")) {
-    result <- "decreasing"
-  } else if (all(sequence == "equal")) {
-    result <- "equal"
-  } else if (length(sequence) > 1) {
-    if (sequence[1] == "increasing" && tail(sequence, 1) == "decreasing") {
-      result <- "increasing-decreasing"
-    } else if (sequence[1] == "decreasing" && tail(sequence, 1) == "increasing") {
-      result <- "decreasing-increasing"
-    }
-  }
-
-  return(result)
+  
+  # If we can't categorize into one of our defined patterns, return NA
+  return(NA_character_)
 }
 
+#' Simulate Agent Choices Using PEST Procedure
+#'
+#' Simulates choices for multiple agents using Parameter Estimation by
+#' Sequential Testing (PEST) procedure.
+#'
+#' @param conditions Vector of effort conditions
+#' @param outcomes Min/max payoffs
+#' @param pest_steps PEST adjustment steps
+#' @param agent_pars List of agent parameters
+#' @param choice_model Model function for choice generation
+#' @return Data frame of simulated choices
 simulate_agent_pest <- function(conditions, outcomes, pest_steps, agent_pars, choice_model) {
-  # Simulates agent choices for PEST procedure
-  #
-  # Args:
-  #   conditions: Numeric vector of conditions for all choice scenarios
-  #   outcomes: Numeric vector of min and max payoffs for simulation
-  #   pest_steps: Numeric vector of initial, minimum, and maximum adjustment step values
-  #   agent_pars: List of parameter sets per agent to simulate
-  #   choice_model: Model function returning choices
-  #
-  # Returns:
-  #   A data frame containing simulated choices for all agents
-
   # Create list to store choices for each agent
   agent_choices <- vector("list", length(agent_pars))
   names(agent_choices) <- names(agent_pars)
@@ -246,7 +239,10 @@ simulate_agent_pest <- function(conditions, outcomes, pest_steps, agent_pars, ch
   return(combined_choices)
 }
 
-# Define function to offset and log-transform parameters
+#' Log Transform Parameters with Offset
+#'
+#' @param x Numeric vector
+#' @return Log-transformed values with offset to avoid negative values
 offset_log <- function(x) {
   # Applies offset (to avoid negative values) and log-transformation
   offset <- abs(min(x)) + 1e-7
@@ -254,6 +250,12 @@ offset_log <- function(x) {
   return(log(y))
 }
 
+#' Generate Random Proportions Matrix
+#'
+#' @param ncol Number of columns (proportions)
+#' @param nrow Number of rows
+#' @param var.names Optional column names
+#' @return Data frame of random proportions summing to 1
 random_props <- function(ncol, nrow, var.names = NULL) {
   # Generates random proportions
   if (ncol < 2) stop("ncol must be greater than 1")
@@ -273,18 +275,12 @@ random_props <- function(ncol, nrow, var.names = NULL) {
   return(DF)
 }
 
-# Power analysis ----------------------------------------------------------
-
+#' Calculate Statistical Power for Model Effects
+#'
+#' @param effect Effect name to analyze
+#' @param log_odds_ratio Effect size as log odds ratio
+#' @return List with odds ratio, probability difference, and power
 calculate_power <- function(effect, log_odds_ratio) {
-  # Calculates power for a given effect and log odds ratio.
-  #
-  # Args:
-  #   effect: The effect to calculate power for.
-  #   log_odds_ratio: The log odds ratio to use for power calculation
-  #
-  # Returns:
-  #   A list containing odds ratio, probability difference, and power.
-
   # Get coefficient name and original values from model
   coef_names <- rownames(summary(choice_mod)$coefficients$cond)
 
@@ -306,4 +302,41 @@ calculate_power <- function(effect, log_odds_ratio) {
   prob_diff <- new_prob - baseline_prob
 
   return(list(odds_ratio = exp(log_odds_ratio), prob_diff = prob_diff, power = power[1]))
+}
+
+#' Normalize Parameters to Specified Ranges
+#'
+#' @param x Data frame with parameters
+#' @param norm_pars List of normalization ranges
+#' @return Data frame with normalized parameters
+normalize_param <- function(x, norm_pars) {
+  # Conditionally normalizes parameter columns to specified ranges
+
+  # Find common columns for applying normalization
+  par_norm <- intersect(names(norm_pars), colnames(x))
+
+  # Apply normalization to each column
+  for (colname in par_norm) {
+    x[[colname]] <- scales::rescale(x[[colname]], norm_pars[[colname]])
+  }
+
+  # Return normalized dataframe
+  return(x)
+}
+
+#' Generate Split Legend Key for Plots
+#'
+#' @param cols Vector of colors
+#' @return grob object for composite legend key
+split_legend_key <- function(cols) {
+  # Generates split legend key
+  grid::polygonGrob(
+    x = c(0, 1, 1, 0),
+    y = c(0, 0, 1, 1),
+    id = rep(1:2, each = 2),
+    gp = grid::gpar(
+      fill = cols,
+      col = "black"
+    )
+  )
 }

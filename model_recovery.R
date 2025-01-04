@@ -1,11 +1,16 @@
-# Title: Model recovery for effort and value study
-# Author: Przemyslaw Marcowski, PhD
-# Email: p.marcowski@gmail.com
-# Date: 2023-03-07
-# Copyright (c) 2023 Przemyslaw Marcowski
-
-# This code is licensed under the MIT license found in the
-# LICENSE file in the root directory of this source tree.
+#' Model Recovery Analysis for Effort Choice Models
+#'
+#' @description
+#' This script performs model recovery analysis to validate parameter estimation
+#' and behavioral predictions. The analysis pipeline includes:
+#' - Simulation of choice data using fitted parameters
+#' - Parameter recovery analysis using simulated data
+#' - Bland-Altman analysis of parameter recovery
+#' - Validation of behavioral effects in simulated agents
+#'
+#' @author Przemyslaw Marcowski, PhD p.marcowski@gmail.com
+#' @date 2023-03-07
+#' @copyright (c) 2023 Przemyslaw Marcowski
 
 # Load packages
 library(tidyverse)
@@ -27,11 +32,11 @@ par_labels <- c(
   "par1" = "delta[1]",
   "par3" = "gamma[1]",
   "par2" = "delta[2]",
-  "par4" = "gamma[2]", 
+  "par4" = "gamma[2]",
   "par5" = "omega"
   )
 
-# Simulation --------------------------------------------------------------
+# Simulation Setup --------------------------------------------------------
 
 # Get values of effort and payoffs from original empirical data for normalization
 org <- read.table("data/processed/choice.txt")
@@ -86,7 +91,7 @@ choice_table <- rbind(table(real_choices), table(simulated_choices))
 choice_test <- chisq.test(choice_table)
 choice_test
 
-## Recover parameters ----
+## Parameter Recovery ----
 
 # Define function for model fitting
 run <- function(nm, d) {
@@ -110,7 +115,7 @@ run <- function(nm, d) {
   info <- matrix(NA, ncol = 3, nrow = nrep)
   results <- matrix(NA, ncol = 5, nrow = nrep)
   pars <- matrix(NA, ncol = max(nps), nrow = nrep)
-  
+
   # Perform validation for nrep repetitions
   for (i in 1:nrep) {
     dsets <- split_data_mccv(d[[nm]], prop)
@@ -120,9 +125,9 @@ run <- function(nm, d) {
     results[i, ] <- get_results_discrete(dsets[[2]], m, fit)
     pars[i, c(1:npar[i])] <- fit[-1]
   }
-  
+
   res <- cbind(info, results, npar, pars)
-  
+
   return(res)
 }
 
@@ -161,19 +166,19 @@ for (par in sprintf("par%i", 1:5)) {
   y <- rec[[par]]
   diff <- x - y
   obs_diff <- mean(diff)
-  
+
   comb <- c(x, y)
   perm_diffs <- numeric(num_perm)
-  
+
   for (i in 1:num_perm) {
     perm <- sample(comb, length(comb), replace = FALSE)
     perm_x <- perm[1:length(x)]
     perm_y <- perm[(length(x) + 1):length(comb)]
     perm_diffs[i] <- mean(perm_x - perm_y)
   }
-  
+
   p <- mean(abs(perm_diffs) >= abs(obs_diff))
-  
+
   test <- data.frame(par = par, diff = obs_diff, p = p)
   par_tests <- rbind(par_tests, test)
 }
@@ -181,6 +186,7 @@ for (par in sprintf("par%i", 1:5)) {
 par_tests$par <- recode(par_tests$par, !!!par_labels)
 par_tests$diff <- exp(par_tests$diff)
 knitr::kable(par_tests, digits = 3)
+write.csv(as.data.frame(par_tests), "output/tables/recovered_parameter_tests.csv")
 
 # Calculate Bland-Altman values for each parameter
 par_ba <- data.frame(
@@ -197,13 +203,13 @@ par_ba <- data.frame(
 for (par in sprintf("par%i", 1:5)) {
   x <- pars[[par]]
   y <- rec[[par]]
-  
+
   temp_ori <- pars$temp_ori
   task_type <- pars$task_type
-  
+
   mean_diff <- mean(x - y)
   sd_diff <- sd(x - y)
-  
+
   ba <- data.frame(
     par = par,
     temp_ori = temp_ori,
@@ -214,7 +220,7 @@ for (par in sprintf("par%i", 1:5)) {
     upper_limit = mean_diff + 1.96 * sd_diff,
     lower_limit = mean_diff - 1.96 * sd_diff
   )
-  
+
   par_ba <- rbind(par_ba, ba)
 }
 
@@ -253,7 +259,7 @@ par_ba_plot <- par_ba %>%
 
 par_ba_plot
 
-# Behavioral effects ------------------------------------------------------
+# Behavioral Effects ------------------------------------------------------
 
 # Define factor levels
 temp_ord <- c("Prospective", "Retrospective") # temporal orientation
@@ -265,14 +271,15 @@ sim$task_type <- factor(sim$task_type, levels = task_ord)
 
 # Fit a glmm model to effort acceptance, temporal orientation, task type, and data type
 ctrl <- glmmTMBControl(parallel = (parallel::detectCores() - 1))
-sim_mod <- 
+sim_mod <-
   glmmTMB(
-    EffortfulOptionChosen ~ (X1 + E2) * temp_ori * task_type + session + (1|id), 
+    EffortfulOptionChosen ~ (X1 + E2) * temp_ori * task_type + session + (1|id),
     data = sim, family = binomial, control = ctrl
   )
 
-summary(sim_mod)
-car::Anova(sim_mod)
+sim_mod_anova <- car::Anova(sim_mod)
+print(sim_mod_anova)
+write.csv(as.data.frame(sim_mod_anova), "output/tables/simulated_model_anova.csv")
 
 sim_prob <- modelbased::estimate_means(sim_mod, at = c("temp_ori", "task_type", "E2 = [0, 1]"), length = 100)
 
@@ -291,7 +298,7 @@ sim_prob_plot <-
   geom_ribbon(aes(ymin = CI_low, ymax = CI_high), linetype = "blank", alpha = 0.15) +
   geom_line(linewidth = 1) +
   labs(
-    title = "Effortful Option Acceptance by Effort Intensity in Simulated Agents\n", 
+    title = "Effortful Option Acceptance by Effort Intensity in Simulated Agents\n",
     x = "Proportion of Maximum Effort", y = "P(Choose Effortful Option)",
     color = "Temporal Orientation", fill = "Temporal Orientation",
     linetype = "Task Type", shape = "Task Type"
@@ -322,7 +329,7 @@ sim_lt_plot <-
   geom_hline(yintercept = 0, linetype = "dashed") +
   geom_point(position = position_dodge(width = 0.5)) +
   geom_errorbar(
-    aes(ymin = asymp.LCL, ymax = asymp.UCL), 
+    aes(ymin = asymp.LCL, ymax = asymp.UCL),
     width = 0.15,
     position = position_dodge(width = 0.5)
   ) +
@@ -344,9 +351,10 @@ sim_lt_plot <-
 
 sim_lt_plot
 
-# Results -----------------------------------------------------------------
+# Results Visualization ---------------------------------------------------
 
-fig_sim <- 
+# Combine plots for publication figure
+fig_sim <-
   (sim_prob_plot / par_ba_plot) +
   plot_annotation(tag_levels = "a") &
   theme(

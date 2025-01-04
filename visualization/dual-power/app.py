@@ -11,7 +11,7 @@ curve, as well as view predefined preference profiles from publications.
 
 __author__ = "Przemyslaw Marcowski"
 __email__ = "p.marcowski@gmail.com"
-__license__ = "MIT"
+__license__ = "GPL 3.0"
 
 import numpy as np
 import dash

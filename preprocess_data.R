@@ -1,22 +1,30 @@
-# Title: Data preprocessing for effort and value study
-# Author: Przemyslaw Marcowski, PhD
-# Email: p.marcowski@gmail.com
-# Date: 2023-03-07
-# Copyright (c) 2023 Przemyslaw Marcowski
-
-# This code is licensed under the MIT license found in the
-# LICENSE file in the root directory of this source tree.
+#' Data Preprocessing Pipeline for Effort Choice Study
+#'
+#' @description
+#' This script performs data preprocessing and cleaning for the effort choice study.
+#' The preprocessing pipeline includes:
+#' - Combining individual experiment data files
+#' - Processing participant demographic information
+#' - Preparing choice data for analysis
+#' - Preparing choice evaluation data
+#' - Data quality checks and sample composition analysis
+#'
+#' @author Przemyslaw Marcowski, PhD p.marcowski@gmail.com
+#' @date 2023-03-07
+#' @copyright (c) 2023 Przemyslaw Marcowski
 
 # Load packages
 library(tidyverse)
 library(readxl)
 
-# Combine individual experiment data files
+# Raw Data Processing -----------------------------------------------------
+
+# Combine and process individual experiment files
 experiment_combined <-
   tibble(
     file_name = fs::dir_ls(
       "data/base/experiment/",
-      type = "file", recurse = TRUE, 
+      type = "file", recurse = TRUE,
       regexp = "/\\d{1}_data.xlsx"
       )
     ) %>%
@@ -43,8 +51,8 @@ experiment_combined <-
       str_detect(condition, "I") ~ "Retrospective"
     ),
     condition = if_else(
-      length(unique(condition)) == 1, 
-      paste0(rep(unique(condition), 2), collapse = ""), 
+      length(unique(condition)) == 1,
+      paste0(rep(unique(condition), 2), collapse = ""),
       paste(unique(condition), collapse = "")
       ),
     id = paste0(id, condition, session),
@@ -57,7 +65,7 @@ experiment_combined <-
       "pica pica time travel" = "time_travel"
     ),
     resp_type = case_when(
-      is.na(trial_step) ~ "indiff", 
+      is.na(trial_step) ~ "indiff",
       resp_type == "post" & trial_step == 1 ~ "payoff_liking",
       resp_type == "post" & trial_step == 2 ~ "item_liking",
       resp_type == "post" & trial_step == 3 ~ "choice_certain",
@@ -66,7 +74,7 @@ experiment_combined <-
     resp = as.numeric(
       case_when(
         resp_type %in% c("payoff_liking", "item_liking", "choice_certain") ~ resp,
-        resp_type == "choice" & resp == "zmienna" ~ "1", 
+        resp_type == "choice" & resp == "zmienna" ~ "1",
         resp_type == "choice" & resp == "stala" ~ "0",
         resp_type == "indiff" ~ X1
         )),
@@ -86,12 +94,14 @@ experiment_combined <-
     outcome, alternative
   )
 
+# Participant Information -------------------------------------------------
+
 # Combine individual participant info files
 participant_info <-
   tibble(
     file_name = fs::dir_ls(
-      "data/base/experiment/", 
-      type = "file", recurse = TRUE, 
+      "data/base/experiment/",
+      type = "file", recurse = TRUE,
       regexp = "/\\d{1}_data_czas.xlsx"
     )
   ) %>%
@@ -119,8 +129,8 @@ participant_info <-
   group_by(id) %>%
   mutate(
     condition = if_else(
-      length(unique(condition)) == 1, 
-      paste0(rep(unique(condition), 2), collapse = ""), 
+      length(unique(condition)) == 1,
+      paste0(rep(unique(condition), 2), collapse = ""),
       paste(unique(condition), collapse = "")
     ),
     id = paste0(id, condition, session),
@@ -129,8 +139,10 @@ participant_info <-
   ungroup() %>%
   select(id, sex, age, group, session, task_type, temp_ori, perf_time)
 
+# Choice Data Preparation -------------------------------------------------
+
 # Prepare choice data
-experiment_choice <- 
+experiment_choice <-
   experiment_combined %>%
   filter(
     resp_type == "choice",
@@ -147,16 +159,23 @@ experiment_choice <-
   select(id, session, task_type, temp_ori, trial, X1, E1, X2, E2, EffortfulOptionChosen, rt)
 
 # Prepare choice evaluation data
-experiment_last_choice <- 
+experiment_last_choice <-
   experiment_combined %>%
-  select(id, session, task_type, temp_ori, trial, X2, E2, resp_type, resp) %>%
+  filter(E2 > 0) %>%
+  arrange(id, session, trial) %>%
+  group_by(id, session, trial) %>%
+  slice_tail(n = 5) %>%
+  mutate(chosen = if_else(any(resp_type == "choice" & resp == 1), "Item", "Payoff")) %>%
   filter(
-    !resp_type == "choice",
-    id %in% participant_info$id
-  ) %>%
-  spread(resp_type, resp) %>%
-  arrange(id, session, trial, E2) %>%
-  select(id, session, task_type, temp_ori, trial, X2, E2, indiff, choice_certain, item_liking, payoff_liking)
+    id %in% participant_info$id,
+    !resp_type == "choice"
+    ) %>%
+  select(id, session, task_type, temp_ori, trial, E2, resp_type, resp, chosen) %>%
+  spread(resp_type, resp)
+
+# Data Quality Checks -----------------------------------------------------
+
+# Verify data completeness and sample composition
 
 # Check for NAs
 sum(is.na(participant_info))
@@ -164,18 +183,18 @@ sum(is.na(experiment_choice))
 sum(is.na(experiment_last_choice))
 
 # Check counts
-n_distinct(str_extract(participant_info$id, ".+(?=_)"))
-n_distinct(str_extract(experiment_choice$id, ".+(?=_)"))
-n_distinct(str_extract(experiment_last_choice$id, ".+(?=_)"))
+n_distinct(participant_info$id)
+n_distinct(experiment_choice$id)
+n_distinct(experiment_last_choice$id)
 
 # Inspect sample composition
-participant_info %>% 
+participant_info %>%
   group_by(id = str_extract(id, "\\w{2}\\d{1,2}(?=H)")) %>%
   slice(1) %>%
-  group_by(group) %>% 
+  group_by(group) %>%
   summarise(n_distinct(id))
 
-participant_info %>% 
+participant_info %>%
   group_by(id = str_extract(id, "\\w{2}\\d{1,2}(?=H)")) %>%
   slice(1) %>%
   ungroup() %>%
@@ -185,7 +204,7 @@ participant_info %>%
     sd_age = sd(age)
   )
 
-participant_info %>% 
+participant_info %>%
   group_by(id = str_extract(id, "\\w{2}\\d{1,2}(?=H)")) %>%
   slice(1) %>%
   group_by(sex) %>%
@@ -195,7 +214,8 @@ participant_info %>%
     sd_age = sd(age)
   )
 
-# Save prepared data files
+# Save Processed Data -----------------------------------------------------
+
 write.table(participant_info, "data/processed/participants.txt")
 write.table(experiment_choice, "data/processed/choice.txt")
 write.table(experiment_last_choice, "data/processed/last_choice.txt")

@@ -61,7 +61,8 @@ effort-choice-models/
 │   │   ├── processed/
 │   │   ├── starts/
 │   │   └── boot/
-│   └── plots/
+│   ├── plots/
+│   └── tables/
 │
 ├── preprocess_data.R
 ├── glmm_analysis.R
@@ -92,6 +93,8 @@ Summary of the directory structure:
 
 &nbsp;&nbsp;&nbsp;`plots/`: Contains generated figures and visualizations.
 
+&nbsp;&nbsp;&nbsp;`tables/`: Contains generated results tables in CSV format.
+
 
 `*.R`: R scripts for data preprocessing, GLMM analysis, model cross-validation, model inference, model recovery, and behavioral task validation, located in the root directory.
 
@@ -106,13 +109,13 @@ No installation is required beyond having R and the necessary libraries. To run 
    ```
    git clone [https://github.com/pmarcowski/effort-value-study.git](https://github.com/pmarcowski/effort-value-study.git)
    ```
-   
+
 3. Navigate to the project directory:
 
    ```
    cd effort-value-study
    ```
-   
+
 5. Run the R scripts in the root directory in the following order:
    - `preprocess_data.R`
    - `glmm_analysis.R`
@@ -128,8 +131,8 @@ Each script can be executed in an R environment. The scripts are designed to be 
 ## Data
 
 The experiment used a mixed design with repeated measures:
-- 2 (temporal orientation: prospective or retrospective; between-subjects) 
-- 2 (task type: hypothetical or real; within-subjects) 
+- 2 (temporal orientation: prospective or retrospective; between-subjects)
+- 2 (task type: hypothetical or real; within-subjects)
 - 5 (effort intensity: [45, 75, 115, 175, 270] stairs; within-subjects)
 
 Participants made choices between an effortless monetary payoff or an item (mug) associated with a given level of effort. The effort was presented as climbing a given number of stairs.

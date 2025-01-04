@@ -1,11 +1,18 @@
-# Title: Choice analysis for effort and value study
-# Author: Przemyslaw Marcowski, PhD
-# Email: p.marcowski@gmail.com
-# Date: 2023-03-07
-# Copyright (c) 2023 Przemyslaw Marcowski
-
-# This code is licensed under the MIT license found in the
-# LICENSE file in the root directory of this source tree.
+#' Effort Choice Models Analysis Pipeline
+#'
+#' @description
+#' This script analyzes choice behavior in effort-based decision making tasks using
+#' generalized linear mixed models (GLMM). The analysis pipeline includes:
+#' - Data preparation and factor level specification
+#' - Choice pattern analysis and visualization
+#' - GLMM model fitting for effort acceptance
+#' - Marginal means analysis and visualization
+#' - Linear trends analysis
+#' - Power and sensitivity analysis
+#'
+#' @author Przemyslaw Marcowski, PhD p.marcowski@gmail.com
+#' @date 2023-03-07
+#' @copyright (c) 2023 Przemyslaw Marcowski
 
 # Load packages
 library(tidyverse)
@@ -25,7 +32,7 @@ source("R/colors.R")
 temp_ori_color <- plot_colors[c(4, 3)] # colors
 col_width <- 0.375 # column widths
 
-# Data --------------------------------------------------------------------
+# Data Preparation --------------------------------------------------------
 
 # Define factor levels
 temp_ord <- c("Prospective", "Retrospective") # temporal orientation
@@ -39,9 +46,102 @@ dt$session <- factor(dt$session, levels = session_ord)
 dt$temp_ori <- factor(dt$temp_ori, levels = temp_ord)
 dt$task_type <- factor(dt$task_type, levels = task_ord)
 
-# GLMM: Effort acceptance -------------------------------------------------
+# Choice Pattern Analysis -------------------------------------------------
 
-# Fit a glmm model to effort acceptance, temporal orientation, and task type
+# Calculate and visualize choice proportions and preference transitions
+choice_patterns <- dt %>%
+  group_by(id, temp_ori) %>%
+  reframe(
+    effort_level = unique(E2),
+    choice_prop = sapply(effort_level, function(e) mean(EffortfulOptionChosen[E2 == e]))
+  ) %>%
+  group_by(id, temp_ori) %>%
+  reframe(
+    lower_effort = effort_level,
+    higher_effort = list(effort_level),
+    lower_choice = choice_prop,
+    higher_choice = list(choice_prop)
+  ) %>%
+  unnest(cols = c(higher_effort, higher_choice)) %>%
+  filter(higher_effort > lower_effort) %>%
+  mutate(
+    pattern = case_when(
+      lower_choice <= 0.5 & higher_choice > 0.5 ~ "Positive",
+      lower_choice > 0.5 & higher_choice <= 0.5 ~ "Negative",
+      TRUE ~ "No Change"
+    )
+  ) %>%
+  group_by(id, temp_ori) %>%
+  mutate(
+    pattern_type = case_when(
+      any(pattern == "Positive") ~ "Positive",
+      any(pattern == "Negative") ~ "Negative",
+      TRUE ~ "No Change"
+    )
+  ) %>%
+  ungroup()
+
+# Create data for violin plot
+choice_violin_data <- choice_patterns %>%
+  pivot_longer(
+    cols = c("lower_choice", "higher_choice"),
+    names_to = "effort_level",
+    values_to = "prop_chosen"
+  ) %>%
+  mutate(x_level = factor(if_else(effort_level == "lower_choice", "Low", "High"),
+                          levels = c("Low", "High")))
+
+# Visualize preference shifts
+choice_patterns_plot <- choice_patterns %>%
+  ggplot() +
+  geom_hline(yintercept = 0.5, linetype = "dashed") +
+  geom_segment(
+    aes(x = "Low", xend = "High",
+        y = lower_choice, yend = higher_choice,
+        color = pattern_type,
+        group = id),
+    alpha = 0.4
+    ) +
+  geom_point(aes(x = "Low", y = lower_choice, color = pattern_type), size = 2) +
+  geom_point(aes(x = "High", y = higher_choice, color = pattern_type), size = 2) +
+  geom_violin(
+    data = choice_violin_data,
+    aes(x = x_level, y = prop_chosen),
+    alpha = 0.2
+    ) +
+  facet_wrap(~temp_ori) +
+  scale_color_manual(values = plot_colors[c(2, 5, 3)]) +
+  scale_y_continuous(
+    limits = c(0, 1),
+    breaks = seq(0, 1, 0.2)
+    ) +
+  labs(
+    x = "Proportion of Maximum Effort",
+    y = "P(Choose Effortful Option)",
+    color = "Preference Pattern"
+    ) +
+  cowplot::theme_cowplot() +
+  theme(
+    legend.position = "bottom",
+    strip.background = element_rect(color = "transparent", fill = "transparent"))
+
+choice_patterns_plot
+
+# Calculate patterns summary
+choice_patterns_summary <- choice_patterns %>%
+  group_by(temp_ori, pattern_type) %>%
+  summarise(
+    n = n(),
+    prop = n / sum(n),
+    mean_prop = mean(prop),
+    .groups = "drop"
+  )
+
+knitr::kable(choice_patterns_summary)
+
+# GLMM Analysis -----------------------------------------------------------
+
+# Fit mixed model for effort acceptance with temporal orientation and task type
 ctrl <- glmmTMBControl(parallel = (parallel::detectCores() - 1))
 choice_mod <-
   glmmTMB(
@@ -49,15 +149,31 @@ choice_mod <-
     data = dt, family = binomial, control = ctrl
   )
 
-car::Anova(choice_mod)
+choice_anova <- car::Anova(choice_mod)
+print(choice_anova)
+write.csv(as.data.frame(choice_anova), "output/tables/choice_model_anova.csv")
 
-### Marginal means ----
+## Marginal Means ----
 
-emmeans(choice_mod, pairwise ~ temp_ori, regrid = "response", infer = TRUE, adjust = "fdr")
-emmeans(choice_mod, pairwise ~ temp_ori | task_type, regrid = "response", infer = TRUE, adjust = "fdr")
-
+# Calculate and visualize estimated marginal means
+em1 <- emmeans(choice_mod, pairwise ~ temp_ori, regrid = "response", infer = TRUE, adjust = "fdr")
+em2 <- emmeans(choice_mod, pairwise ~ temp_ori | task_type, regrid = "response", infer = TRUE, adjust = "fdr")
 choice_em <- emmeans(choice_mod, pairwise ~ task_type | temp_ori, regrid = "response", infer = TRUE, adjust = "fdr")
-choice_em <- as.data.frame(choice_em$emmeans)
+
+# Extract means and contrasts
+choice_means <- as.data.frame(choice_em$emmeans)
+choice_contrasts <- as.data.frame(choice_em$contrasts)
+
+print(choice_means)
+print(choice_contrasts)
+print(em1)
+print(em2)
+
+write.csv(choice_means, "output/tables/choice_model_means.csv")
+write.csv(choice_contrasts, "output/tables/choice_model_contrasts.csv")
+
+choice_em <- choice_means  # Use means for plotting
+
 choice_em$cond <- with(choice_em, paste0(task_type, " (", temp_ori, ")"))
 legend_lims <- sort(unique(choice_em$cond))
 legend_cols <- rep(temp_ori_color, 2)
@@ -142,8 +258,9 @@ choice_prob_plot <-
 
 choice_prob_plot
 
-### Linear trends ----
+## Linear Trends ----
 
+# Analyze effort slopes across conditions
 emtrends(choice_mod, ~1, "X1", regrid = "response", infer = TRUE, adjust = "fdr")
 emtrends(choice_mod, ~1, "E2", regrid = "response", infer = TRUE, adjust = "fdr")
 
@@ -178,7 +295,7 @@ choice_lt_plot <-
 
 choice_lt_plot
 
-### Sensitivity analysis ----
+## Sensitivity Analysis ----
 
 # Define effect sizes and effect names
 log_odds_ratios <- c(0.1, 0.2, 0.5, 0.8)
@@ -209,7 +326,7 @@ ggplot(power_results, aes(x = odds_ratio, y = power, color = effect)) +
   scale_x_log10(breaks = power_results$odds_ratio, labels = scales::number_format(accuracy = 0.01)) +
   labs(
     title = "Sensitivity Analysis",
-    x = "Odds Ratio", y = "Power", 
+    x = "Odds Ratio", y = "Power",
     color = "Effect"
   ) +
   see::scale_color_see() +
@@ -221,10 +338,9 @@ ggplot(power_results, aes(x = odds_ratio, y = power, color = effect)) +
     strip.background = element_rect(fill = "transparent")
   )
 
-# Results -----------------------------------------------------------------
+# Results Visualization ---------------------------------------------------
 
-# Effort acceptance
-
+# Combine plots for publication figure
 p2a <- choice_em_plot
 p2b <- choice_prob_plot
 p2c <- choice_lt_plot

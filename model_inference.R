@@ -1,11 +1,16 @@
-# Title: Model inference for effort and value study
-# Author: Przemyslaw Marcowski, PhD
-# Email: p.marcowski@gmail.com
-# Date: 2023-03-07
-# Copyright (c) 2023 Przemyslaw Marcowski
-
-# This code is licensed under the MIT license found in the
-# LICENSE file in the root directory of this source tree.
+#' Model Inference for Effort Choice Analysis
+#'
+#' @description
+#' This script performs model comparison and parameter inference for effort-based
+#' decision making models. The analysis pipeline includes:
+#' - Model comparison using information criteria
+#' - Parameter estimation and statistical inference
+#' - Leave-one-condition-out (LOCO) cross-validation
+#' - Visualization of model predictions and preference profiles
+#'
+#' @author Przemyslaw Marcowski, PhD p.marcowski@gmail.com
+#' @date 2023-03-07
+#' @copyright (c) 2023 Przemyslaw Marcowski
 
 # Load packages
 library(tidyverse)
@@ -29,7 +34,7 @@ temp_ori_color <- plot_colors[c(4, 3)] # colors
 col_width <- 0.375 # column widths
 
 # Define parameter labels to display on plots
-par_labels <- c(expression(delta[1], gamma[1], delta[2], gamma[2], omega, tau, delta[1]*gamma[1], delta[2]*gamma[2]))
+par_labels <- c(expression(delta[1], gamma[1], delta[2], gamma[2], omega, tau, delta[1] * gamma[1], delta[2] * gamma[2]))
 
 # Number of ootstrap samples
 nboot <- 1000
@@ -37,26 +42,12 @@ nboot <- 1000
 # Number of cores for parallelization
 ncores <- parallel::detectCores() - 1
 
-normalize_param <- function(x, norm_pars) {
-  # Conditionally normalizes parameter columns to specified ranges
-  
-  # Find common columns for applying normalization
-  par_norm <- intersect(names(norm_pars), colnames(x))
-  
-  # Apply normalization to each column
-  for (colname in par_norm) {
-    x[[colname]] <- scales::rescale(x[[colname]], norm_pars[[colname]])
-  }
-  
-  # Return normalized dataframe
-  return(x)
-}
-
-# Data --------------------------------------------------------------------
+# Data Preparation --------------------------------------------------------
 
 # Retrieve output
 cv <- read.table("output/models/processed/cv.txt") # model cross-validation
 fits <- read.table("output/models/processed/fits.txt") # model fits
+loco <- read.table("output/models/processed/loco.txt")
 pars <- fits[, c("id", "temp_ori", "task_type", "model", sprintf("par%i", 1:6))] # fitted parameters
 pars_sel <- pars[pars$model == "DPOWER", ] # DPOWER parameters
 pars_sel$term1 <- with(pars_sel, abs(par1 * 1^par3))
@@ -70,7 +61,7 @@ res <-
   mutate(rank_test = dense_rank(logloss)) %>%
   ungroup()
 
-# Behavioral modeling -----------------------------------------------------
+# Model Comparison --------------------------------------------------------
 
 ## Model loss ----
 
@@ -89,6 +80,9 @@ loss <-
   arrange(temp_ori, logloss)
 
 knitr::kable(loss, digits = 3)
+write.csv(loss, "output/tables/model_loss.csv")
+
+# Prepare order for models based on mean rank
 mod_order <- levels(forcats::fct_reorder(loss$model, -loss$mean_rank))
 res$model <- factor(res$model, levels = mod_order)
 loss$model <- factor(loss$model, levels = mod_order)
@@ -110,10 +104,10 @@ loss_plot <-
   stat_summary(fun = mean, geom = "point", shape = 1, size = 2, color = "black", position = position_dodge(width = 0.75)) +
   geom_text(
     data = summarise(
-      group_by(res, temp_ori, model), 
-      y = mean(logloss), 
+      group_by(res, temp_ori, model),
+      y = mean(logloss),
       pos = 0.1 + (quantile(logloss, 0.75) + 1.5 * IQR(logloss))
-      ),
+    ),
     aes(y = pos, label = gsub("0\\.", "\\.", format(round(y, 3)))),
     position = position_dodge(width = 0.75),
     color = "black"
@@ -137,14 +131,14 @@ loss_plot <-
 
 loss_plot
 
-### Bootstrap test ----
+### Bootstrap Test ----
 
 # Get bootstrapped differences of mean loss
 boot_loss_file <- "output/models/boot/loss.rds"
 if (!file.exists(boot_loss_file)) { # check if checkpoint exists
   cl <- makeClusterPSOCK(ncores)
   plan(cluster, workers = cl)
-  
+
   loss_boot <-
     res %>%
     select(temp_ori, id, repn, model, logloss) %>%
@@ -158,7 +152,7 @@ if (!file.exists(boot_loss_file)) { # check if checkpoint exists
     mutate(
       n = map(data, nrow),
       boots = future_map(
-        data, ~boot(
+        data, ~ boot(
           data = ., function(x, i) {
             d <- as.data.frame(x)[i, ]
             ms <- sapply(list(d$logloss1, d$logloss2), mean)
@@ -176,7 +170,7 @@ if (!file.exists(boot_loss_file)) { # check if checkpoint exists
   # Get confidence intervals for differences of means
   cl <- makeClusterPSOCK(ncores)
   plan(cluster, workers = cl)
-  
+
   loss_ci <-
     loss_boot %>%
     mutate(
@@ -191,9 +185,9 @@ if (!file.exists(boot_loss_file)) { # check if checkpoint exists
     ) %>%
     select(-boots) %>%
     unnest(cols = ci)
-  
+
   parallel::stopCluster(cl)
-  
+
   save(loss_boot, loss_ci, file = boot_loss_file) # save checkpoint
 } else { # reload checkpoint
   load(file = boot_loss_file)
@@ -285,7 +279,7 @@ loss_ranks_freq <- # calculate model ranks
 loss_ranks_freq %>% # inspect rank 1 frequencies
   filter(rank_test == 1) %>%
   arrange(temp_ori, -prop) %>%
-  knitr::kable(digits = 3) 
+  knitr::kable(digits = 3)
 
 relf_plot <- # plot model frequencies
   loss_ranks_freq %>%
@@ -351,12 +345,133 @@ pcor_plot <-
 
 pcor_plot
 
-## Predictions ----
+## Goodness-of-Fit ----
 
-### Value functions ----
+# Calculate information criteria
+model_deltas <-
+  fits %>%
+  select(id, model, K, ntrain, estim) %>%
+  group_by(id) %>%
+  mutate(
+    # Information criteria
+    aic = 2 * estim + 2 * K,
+    aicc = aic + (2 * K * (K + 1)) / (ntrain - K - 1),
+    bic = 2 * estim + K * log(ntrain),
+
+    # Delta metrics
+    delta_aic = aic - min(aic),
+    delta_aicc = aicc - min(aicc),
+    delta_bic = bic - min(bic),
+
+    # Akaike weights
+    rel_likelihood = exp(-0.5 * delta_aicc),
+    akaike_weight = rel_likelihood / sum(rel_likelihood),
+
+    # Evidence ratios (relative to best model)
+    evidence_ratio = max(akaike_weight) / akaike_weight
+  ) %>%
+  ungroup()
+
+# Summarize model comparison
+model_summary <-
+  model_deltas %>%
+  group_by(model) %>%
+  summarise(
+    mean_delta_aic = mean(delta_aic),
+    mean_delta_aicc = mean(delta_aicc),
+    mean_delta_bic = mean(delta_bic),
+    mean_weight = mean(akaike_weight),
+    label_y = quantile(delta_aicc, 0.75) + 1.5 * IQR(delta_aicc) + 5
+  ) %>%
+  arrange(mean_delta_aicc)
+
+knitr::kable(model_summary, digits = 2)
+write.csv(model_summary, "output/tables/model_comparison.csv")
+
+# Prepare order for models based on mean ΔAICc
+mod_order2 <- levels(forcats::fct_reorder(model_summary$model, -model_summary$mean_delta_aicc))
+
+# Compare models using ΔAICc
+model_deltas_plot <-
+  model_deltas %>%
+  ggplot(aes(x = model, y = delta_aicc)) +
+  geom_jitter(width = 0.1, height = 0, shape = 1, color = "royalblue", alpha = 0.8) +
+  geom_boxplot(outliers = FALSE, width = 0.5, fill = "transparent") +
+  geom_point(
+    data = model_summary,
+    aes(x = model, y = mean_delta_aicc),
+    size = 2,
+    inherit.aes = FALSE
+  ) +
+  geom_text(
+    data = model_summary,
+    aes(x = model, y = label_y, label = sprintf("%.2f", mean_delta_aicc)),
+    inherit.aes = FALSE
+  ) +
+  scale_x_discrete(limits = mod_order2) +
+  labs(
+    title = expression("Model Comparison by " * Delta[AICc]),
+    x = "Model",
+    y = expression(Delta[AICc])
+  ) +
+  coord_cartesian(ylim = c(0, 100)) +
+  cowplot::theme_cowplot() +
+  theme(
+    legend.position = "none",
+    plot.title = element_text(hjust = 0.5),
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+    strip.background = element_rect(color = "transparent", fill = "transparent")
+  )
+
+model_deltas_plot
+cowplot::ggsave2("output/plots/FigS1.pdf", model_deltas_plot, width = 10, height = 5, scale = 1.2)
+
+## LOCO Analysis ----
+
+# Summarize loss for LOCO
+loco_loss <-
+  loco %>%
+  mutate(pcor = 1 - z_o) %>%
+  group_by(model, fold) %>%
+  summarise(
+    n = n(),
+    logloss = mean(logloss),
+    pcor = mean(pcor)
+  ) %>%
+  ungroup() %>%
+  arrange(logloss)
+
+# Inspect loss across conditions
+loco_loss %>%
+  select(model, fold, logloss) %>%
+  mutate(fold = sprintf("%.2f", as.numeric(fold))) %>%
+  spread(fold, logloss) %>%
+  knitr::kable(digits = 3)
+
+# Visualize loss across conditions
+loco_loss_plot <-
+  loco_loss %>%
+  ggplot(aes(x = fold, y = logloss, color = model)) +
+  geom_point() +
+  geom_line() +
+  labs(title = "Prediction Error (LOCO)", x = "Test Fold", y = "Log-Loss", color = "Model") +
+  scale_y_continuous(breaks = seq(0, 3, 0.5)) +
+  coord_cartesian(ylim = c(0, 3)) +
+  cowplot::theme_cowplot() +
+  theme(
+    legend.position = "bottom",
+    legend.justification = c(0.5, 0.5),
+    plot.title = element_text(hjust = 0.5),
+    strip.background = element_rect(color = "transparent", fill = "transparent")
+  )
+
+loco_loss_plot
+
+# Parameter Analysis ------------------------------------------------------
+
+## Value functions ----
 
 # Extract individual parameter estimates and plot value functions
-
 pars_list <- split(pars_sel, pars_sel$id, drop = TRUE)
 dat <- data.frame(E1 = 0, E2 = seq(0, 1, length.out = 100), X1 = 1, X2 = 1)
 val_list <- list()
@@ -379,20 +494,20 @@ profiles <- # get value function profiles
   val %>%
   mutate(sv = as.numeric(sv)) %>%
   group_by(id, temp_ori) %>%
-  summarise(
-    # Get preference profiles
-    profile = detect_sequences(sv),
+  summarize(
     # Get function change points
-    changepoints = as.integer(count_changepoints(sv)),
-    profile = str_to_title(profile)
-  )
+    changepoints = as.integer(get_sequence_patterns(sv)$changepoints),
+    # Get preference profiles
+    profile = str_to_title(get_sequence_profile(sv))
+  ) %>%
+  ungroup()
 
 val_profiles <- left_join(val, profiles) # combine subjective values and profiles
 
-### Preference profiles ----
+## Preference profiles ----
 
 # Example cases
-val_examples0 <- c("WS34HCRC2", "SM20HIHI1", "WS8HIRI1", "WS3HIHI2")
+val_examples0 <- c("MT8HIRI1", "SM20HIHI1", "WS8HIRI1", "WS3HIHI2")
 
 # Create labels for example profiles
 val_examples_labs <-
@@ -407,19 +522,21 @@ val_examples_labs <-
 profiles_plot <-
   val_profiles %>%
   filter(id %in% val_examples_labs$id) %>%
-  ggplot(aes(x = E2, y = sv, group = id)) +
-  geom_line(color = "gold") +
+  ggplot(aes(x = E2, y = sv, group = id, color = id)) +
+  geom_hline(yintercept = 1, linetype = "dashed") +
+  geom_line(linewidth = 1) +
   ggrepel::geom_text_repel(
     data = val_examples_labs,
     aes(label = profile),
     segment.color = NA, nudge_y = 0.1
   ) +
+  scale_color_manual(values = c("#0C5BB0FF", "#15983DFF", "#B22222", "#FEC10BFF")) +
   labs(
-    x = "Proportion of Maximum Effort", 
+    x = "Proportion of Maximum Effort",
     y = "Proportion of Subjective Value"
-    ) +
+  ) +
   coord_cartesian(ylim = c(0, 3), expand = FALSE) +
-  labs(title = "Preference Profiles") +
+  labs(title = "Empirical Profile Examples") +
   cowplot::theme_cowplot() +
   theme(
     legend.position = "none",
@@ -440,11 +557,16 @@ profiles_freq <- # calculate profile proportions
     CI_low = lapply(n, prop.test, n = sum(n)),
     CI_high = sapply(CI_low, function(x) x$conf.int[2]),
     CI_low = sapply(CI_low, function(x) x$conf.int[1])
-  )
+  ) %>%
+  ungroup()
 
-knitr::kable(arrange(profiles_freq, profile), digits = 2) # inspect proportions
+# Inspect proportions
+knitr::kable(arrange(profiles_freq, profile), digits = 3)
+write.csv(profiles_freq, "output/tables/profile_frequencies.csv")
+
+# Test profile distribution
 profiles_tab <- xtabs(n ~ profile + temp_ori, data = profiles_freq) # create cross-table
-profiles_test <- fisher.test(profiles_tab[c(1, 3), ]) # compare profile counts
+profiles_test <- fisher.test(profiles_tab[c(1, 3), ]) # test selected profile counts
 profiles_test
 
 profiles_freq_plot <- # plot profile proportions
@@ -455,7 +577,7 @@ profiles_freq_plot <- # plot profile proportions
   scale_x_discrete(
     limits = c("Decreasing", "Decreasing-Increasing", "Increasing", "Increasing-Decreasing"),
     labels = c("D", "D-I", "I", "I-D")
-    ) +
+  ) +
   guides(linetype = guide_legend("Temporal Orientation")) +
   labs(title = "Profile Frequencies", x = "Profile", y = "Proportion", fill = "Temporal Orientation") +
   coord_cartesian(ylim = c(0, 1)) +
@@ -470,7 +592,7 @@ profiles_freq_plot <- # plot profile proportions
 
 profiles_freq_plot
 
-### Parameters ----
+## Estimated Parameters ----
 
 # Inspect parameter estimates
 pars_sel %>%
@@ -484,7 +606,7 @@ pars_sel %>%
 
 # Define normalization ranges for each parameter
 norm_range <- list(
-  "par1" = c(-1, 0),
+  "par1" = c(0, 1),
   "par2" = c(0, 1),
   "par3" = c(0, 1),
   "par4" = c(0, 1),
@@ -495,8 +617,6 @@ norm_range <- list(
 
 # Normalize parameter values
 pars_norm <- normalize_param(pars_sel, norm_range)
-
-#### Estimates ----
 
 # Plot normalized parameter values
 pars_plot <-
@@ -518,14 +638,14 @@ pars_plot <-
   # annotate("rect", xmin = 0, xmax = 4.5, ymin = -Inf, ymax = Inf, alpha = 0.1, fill = "forestgreen") +
   annotate("text", label = "***", x = 4.9, y = 0.525) +
   labs(
-    title = "Model Parameters",
+    title = "Estimated Parameters",
     x = "Parameter", y = "Mean Value",
     color = "Temporal Orientation"
   ) +
   scale_x_discrete(
-    limits = c("par1", "par3", "par2", "par4", "par5", "par6", "term1", "term2"), 
+    limits = c("par1", "par3", "par2", "par4", "par5", "par6", "term1", "term2"),
     labels = par_labels
-    ) +
+  ) +
   coord_flip(ylim = c(-0.5, 0.5)) +
   scale_color_manual(values = temp_ori_color) +
   cowplot::theme_cowplot() +
@@ -568,7 +688,7 @@ pars_weights_plot <-
 
 pars_weights_plot
 
-#### Bootstrap test ----
+### Bootstrap Test ----
 
 boot_pars_file <- "output/models/boot/pars.rds"
 if (!file.exists(boot_pars_file)) {
@@ -579,18 +699,18 @@ if (!file.exists(boot_pars_file)) {
   # Pre-allocate matrix for bootstrap results
   pars_boot <- as.data.frame(matrix(NA, ncol = length(pars_cols), nrow = length(par_names)))
   colnames(pars_boot) <- pars_cols
-  
+
   # Initiate row index for allocating bootstrap results
   rowid <- 0
 
   for (par in par_names) {
     rowid <- rowid + 1
-    
+
     # Subset parameter data for each condition
     d1 <- with(pars_norm, pars_norm[temp_ori == "Prospective", par])
     d2 <- with(pars_norm, pars_norm[temp_ori == "Retrospective", par])
     data <- c(d1, d2)
-    
+
     # Bootstrap difference in means
     b <- boot(
       data, function(x, i) {
@@ -599,25 +719,25 @@ if (!file.exists(boot_pars_file)) {
         ms <- sapply(list(x1, x2), mean)
         return(c(diff(ms)))
       }, nboot
-      )
-    
+    )
+
     # Compute 95% confidence intervals
     ci <- boot.ci(b, type = "bca")
     ci_low <- ci$bca[4]
     ci_high <- ci$bca[5]
-    
+
     # Approximate t-test
     n <- length(b$t)
     diff <- mean(b$t)
     se <- sd(b$t) / sqrt(n)
-    t = (diff - 0) / se
-    p_val = 2 * pt(-abs(t), as.integer(n) - 1)
+    t <- (diff - 0) / se
+    p_val <- 2 * pt(-abs(t), as.integer(n) - 1)
     p_lab <- as.character(cut(p_val, c(-Inf, 0.001, 0.01, 0.05, Inf), c(".001", ".01", ".05", "ns")))
-    is_diff = if_else(ci_low <= 0 & ci_high >= 0, FALSE, TRUE)
-    
+    is_diff <- if_else(ci_low <= 0 & ci_high >= 0, FALSE, TRUE)
+
     pars_boot[rowid, ] <- data.frame(par, diff, ci_low, ci_high, t, p_val, p_lab, is_diff)
   }
-  
+
   save(pars_boot, file = boot_pars_file)
 } else {
   load(file = boot_pars_file)
@@ -625,10 +745,9 @@ if (!file.exists(boot_pars_file)) {
 
 # Inspect parameter differences
 knitr::kable(pars_boot, digits = 3)
+write.csv(as.data.frame(pars_boot), "output/tables/parameter_tests.csv")
 
-# Results -----------------------------------------------------------------
-
-# Model comparisons
+# Results Visualization ---------------------------------------------------
 
 # Create legend for model frequencies plot
 relf_legend <-
@@ -661,6 +780,9 @@ relf_plot_legend <- # inset legend to plot
     ignore_tag = FALSE
   )
 
+# Combine plots for publication figure
+
+# Loss analysis
 p3a <- loss_plot
 p3b <- loss_test_plot
 p3c <- relf_plot_legend + theme(legend.position = "none")
@@ -674,8 +796,7 @@ fig_comparisons <-
 fig_comparisons
 cowplot::ggsave2("output/plots/Fig4.pdf", fig_comparisons, width = 10, height = 7, scale = 1.2)
 
-# Predictions
-
+# Parameter analysis
 p4a <- pars_plot + theme(legend.position = "none")
 p4b <- profiles_plot
 p4c <- profiles_freq_plot
