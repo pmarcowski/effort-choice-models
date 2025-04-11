@@ -107,13 +107,13 @@ No installation is required beyond having R and the necessary libraries. To run 
 1. Clone this repository:
 
    ```
-   git clone [https://github.com/pmarcowski/effort-value-study.git](https://github.com/pmarcowski/effort-value-study.git)
+   git clone [https://github.com/pmarcowski/effort-choice-models.git](https://github.com/pmarcowski/effort-choice-models.git)
    ```
 
 3. Navigate to the project directory:
 
    ```
-   cd effort-value-study
+   cd effort-choice-models
    ```
 
 5. Run the R scripts in the root directory in the following order:
@@ -185,7 +185,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 If you use this code or data in your research, please cite our paper:
 
-[citation information to be added upon publication]
+> Marcowski, P., Białaszek, W., & Winkielman, P. (2025). Effort can have positive, negative, and nonmonotonic impacts on outcome value in economic choice. Journal of Experimental Psychology: General. https://doi.org/10.1037/xge0001738
 
 ## Contact
 
