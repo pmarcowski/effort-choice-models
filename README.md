@@ -2,7 +2,7 @@
 
 # Analyze and model effort-based choice in economic decision-making
 
-This repository contains the data and analysis scripts for the peer-reviewed paper "Effort can have positive, negative, and non-monotonic impacts on outcome value in economic choice" by Przemysław Marcowski, Wojciech Białaszek, and Piotr Winkielman.
+This repository contains the data and analysis scripts for the peer-reviewed paper "[Effort can have positive, negative, and non-monotonic impacts on outcome value in economic choice](https://www.researchgate.net/publication/390371836_Effort_can_have_positive_negative_and_nonmonotonic_impacts_on_outcome_value_in_economic_choice)" by Przemysław Marcowski, Wojciech Białaszek, and Piotr Winkielman, published in the [Journal of Experimental Psychology: General](https://psycnet.apa.org/record/2025-98793-001).
 
 Visit the project on the Open Science Framework (OSF) [here](https://osf.io/e3baz/).
 
