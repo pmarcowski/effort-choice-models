@@ -33,15 +33,196 @@ app.index_string = """
         {%favicon%}
         {%css%}
         <style>
-            /* Hide spinner arrows in input[type=number] */
-            input[type=number]::-webkit-outer-spin-button,
-            input[type=number]::-webkit-inner-spin-button {
-                -webkit-appearance: none;
+            /* --- Base Styles --- */
+            body {
+                font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
                 margin: 0;
+                padding: 0;
+                background: #ffffff;
+                color: #222;
+                -webkit-font-smoothing: antialiased;
             }
-            input[type=number] {
-                -moz-appearance: textfield;
+
+            p, li, div { line-height: 1.6; color: #333; }
+            h2 { font-weight: 600; color: #111; margin-top: 0; margin-bottom: 0; letter-spacing: -0.5px; }
+            h4 { font-weight: 600; color: #333; margin-top: 0; margin-bottom: 12px; font-size: 18px; }
+            h5 { font-weight: 600; margin-bottom: 0.25rem; margin-top: 0; font-size: 15px; }
+
+            /* --- Layout Grid --- */
+            .main-container {
+                max-width: 1400px;
+                margin: 0 auto;
+                padding: 40px;
             }
+
+            .main-flex-row {
+                display: flex;
+                flex-direction: row;
+                justify-content: center;
+                align-items: flex-start;
+                gap: 0;
+                width: 100%;
+                box-sizing: border-box;
+            }
+
+            /* --- Columns --- */
+            
+            /* Plot Column */
+            .flex-col-plot {
+                flex: 1 1 550px;
+                min-width: 320px;
+                box-sizing: border-box;
+                padding-right: 50px;
+            }
+
+            /* Middle Column: Math & Stats */
+            .flex-col-middle {
+                flex: 0 1 auto;
+                min-width: 400px;
+                box-sizing: border-box;
+                border-left: 1px solid #e5e5e5;
+                border-right: 1px solid #e5e5e5;
+                padding: 0 45px;
+            }
+
+            /* Controls Column */
+            .flex-col-params {
+                flex: 0 0 280px;
+                box-sizing: border-box;
+                padding-left: 45px;
+            }
+
+            /* --- Typography Components --- */
+            
+            .section-label {
+                font-size: 12px;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                color: #777;
+                margin-bottom: 15px;
+                margin-top: 30px;
+                display: block;
+            }
+            .section-label:first-child { margin-top: 0; }
+
+            /* Equation Box Styling - RESTORED */
+            .equation-box {
+                font-family: "Times New Roman", Times, serif;
+                font-size: 20px;
+                font-style: italic;
+                background: #f9f9f9;
+                padding: 18px 24px;
+                border-radius: 6px;
+                border: 1px solid #e0e0e0;
+                text-align: center;
+                margin-bottom: 25px;
+                color: #111;
+            }
+
+            .stat-value {
+                font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+                font-size: 14px;
+                color: #333;
+            }
+
+            .legend-list li {
+                margin-bottom: 6px;
+                font-size: 14px;
+                color: #555;
+            }
+            .legend-list strong {
+                color: #222;
+                font-weight: 600;
+                margin-right: 4px;
+            }
+
+            /* --- UI Components --- */
+
+            /* Parameter Buttons (+/-) */
+            .param-btn {
+                background-color: #fff;
+                border: 1px solid #d1d5db;
+                border-radius: 4px;
+                color: #555;
+                font-weight: bold;
+                font-size: 14px;
+                width: 30px;
+                height: 30px;
+                cursor: pointer;
+                transition: all 0.1s ease;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 0;
+            }
+            .param-btn:hover { background-color: #f3f4f6; border-color: #9ca3af; color: #111; }
+            .param-btn:active { background-color: #e5e7eb; }
+
+            /* Inputs */
+            .param-input input {
+                border: 1px solid #d1d5db;
+                border-radius: 4px;
+                padding: 4px;
+                color: #111;
+                font-family: "SFMono-Regular", Consolas, monospace;
+                font-weight: 600;
+                font-size: 15px;
+                background: #fff;
+                height: 30px;
+                box-sizing: border-box;
+            }
+            .param-input input:focus { outline: none; border-color: #333; }
+            
+            /* Action Buttons */
+            .action-btn {
+                background-color: #fff;
+                border: 1px solid #d1d5db;
+                color: #374151;
+                padding: 10px 16px;
+                border-radius: 6px;
+                font-size: 14px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.1s ease;
+                text-align: center;
+                font-family: inherit;
+            }
+            .action-btn:hover { background-color: #f3f4f6; border-color: #9ca3af; color: #111; }
+            
+            /* Primary Button */
+            .action-btn-primary {
+                background-color: #222;
+                border: 1px solid #222;
+                color: #fff;
+            }
+            .action-btn-primary:hover { background-color: #444; border-color: #444; color: #fff; }
+
+            /* --- Mobile Responsiveness (< 1100px) --- */
+            @media (max-width: 1100px) {
+                .main-container { padding: 20px; }
+                .main-flex-row {
+                    flex-direction: column;
+                    gap: 40px;
+                    align-items: center;
+                }
+                .flex-col-plot, .flex-col-middle, .flex-col-params {
+                    width: 100%;
+                    max-width: 700px;
+                    padding: 0;
+                    border: none;
+                }
+                .flex-col-middle {
+                    border-top: 1px solid #eee;
+                    border-bottom: 1px solid #eee;
+                    padding: 30px 0;
+                }
+            }
+            
+            /* Hide spinner arrows */
+            input[type=number]::-webkit-outer-spin-button,
+            input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+            input[type=number] { -moz-appearance: textfield; }
         </style>
     </head>
     <body>
@@ -55,7 +236,8 @@ app.index_string = """
 </html>
 """
 
-# Figure 1 parameter presets
+# --- Data Presets (Normalized Order) ---
+
 FIGURE1_PRESETS = {
     "Decreasing": {"δ₁": 0, "δ₂": 2, "γ₁": 0, "γ₂": 2, "ω": 0},
     "Increasing": {"δ₁": 2, "δ₂": 0, "γ₁": 0.5, "γ₂": 0, "ω": 1},
@@ -63,8 +245,15 @@ FIGURE1_PRESETS = {
     "Increasing-Decreasing": {"δ₁": 3.5, "δ₂": 3.5, "γ₁": 1, "γ₂": 3, "ω": 0.5},
 }
 
-# Figure 5 parameter presets
+# Normalized to match Figure 1 order (Dec -> Inc -> Dec-Inc -> Inc-Dec)
 FIGURE5_PRESETS = {
+    "Decreasing": {
+        "δ₁": 1e-07,
+        "γ₁": 9.582383e-07,
+        "δ₂": 4.55966,
+        "γ₂": 3.306229,
+        "ω": 1e-07,
+    },
     "Increasing": {
         "δ₁": 12.595,
         "γ₁": 0.4693622,
@@ -79,13 +268,6 @@ FIGURE5_PRESETS = {
         "γ₂": 1.491141,
         "ω": 0.4928382,
     },
-    "Decreasing": {
-        "δ₁": 1e-07,
-        "γ₁": 9.582383e-07,
-        "δ₂": 4.55966,
-        "γ₂": 3.306229,
-        "ω": 1e-07,
-    },
     "Increasing-Decreasing": {
         "δ₁": 3.492561,
         "γ₁": 3.258896,
@@ -95,10 +277,8 @@ FIGURE5_PRESETS = {
     },
 }
 
-# Set default parameter values
 default_params = {"ω": 0.5, "δ₁": 0, "γ₁": 1, "δ₂": 0, "γ₂": 1}
 
-# Define parameter bounds
 param_bounds = {
     "ω": {"min": 0, "max": 1},
     "δ₁": {"min": 0, "max": 100},
@@ -107,12 +287,13 @@ param_bounds = {
     "γ₂": {"min": 0, "max": 100},
 }
 
+# --- Helper Functions ---
+
 
 def create_parameter_input(
     param_name, param_label, min_value, max_value, default_value, step
 ):
-    """Create a parameter input control with label and description,
-    including increment/decrement buttons and bounds labels"""
+    """Create a styled parameter input control."""
     descriptions = {
         "ω": "System weight",
         "δ₁": "Positive steepness",
@@ -121,37 +302,49 @@ def create_parameter_input(
         "γ₂": "Negative curvature",
     }
 
-    control = html.Div(
-        style={"marginBottom": "20px"},
+    return html.Div(
+        style={"marginBottom": "24px"},
         children=[
-            html.Label(
-                [
-                    param_label,
+            # Label Row (Symbol + Description)
+            html.Div(
+                children=[
                     html.Span(
-                        f" {descriptions[param_label]}",
+                        param_label,
                         style={
-                            "fontSize": "14px",
-                            "fontWeight": "normal",
-                            "color": "#666",
+                            "fontSize": "18px",
+                            "fontWeight": "700",
+                            "marginRight": "8px",
                         },
                     ),
+                    html.Span(
+                        descriptions[param_label],
+                        style={"fontSize": "15px", "color": "#666"},
+                    ),
                 ],
-                style={
-                    "fontSize": "18px",
-                    "fontWeight": "bold",
-                    "display": "block",
-                    "marginBottom": "5px",
-                },
+                style={"marginBottom": "8px"},
             ),
+            # Controls Row (Min - Btn - Input - Btn - Max)
             html.Div(
-                style={"display": "flex", "alignItems": "center"},
+                style={
+                    "display": "flex",
+                    "alignItems": "center",
+                    "whiteSpace": "nowrap",
+                },
                 children=[
-                    html.Label(f"{min_value}", style={"marginRight": "5px"}),
+                    html.Label(
+                        f"{min_value}",
+                        style={
+                            "marginRight": "8px",
+                            "color": "#999",
+                            "fontSize": "13px",
+                            "minWidth": "10px",
+                        },
+                    ),
                     html.Button(
                         "-",
                         id=f"{param_name}-decrement",
                         n_clicks=0,
-                        style={"marginRight": "5px"},
+                        className="param-btn",
                     ),
                     dcc.Input(
                         id=f"{param_name}-input",
@@ -160,7 +353,12 @@ def create_parameter_input(
                         max=max_value,
                         step=step,
                         value=default_value,
-                        style={"width": "80px", "textAlign": "center"},
+                        className="param-input",
+                        style={
+                            "width": "60px",
+                            "textAlign": "center",
+                            "margin": "0 6px",
+                        },
                         persistence=True,
                         required=False,
                     ),
@@ -168,97 +366,97 @@ def create_parameter_input(
                         "+",
                         id=f"{param_name}-increment",
                         n_clicks=0,
-                        style={"marginLeft": "5px"},
+                        className="param-btn",
                     ),
-                    html.Label(f"{max_value}", style={"marginLeft": "5px"}),
+                    html.Label(
+                        f"max: {max_value}",
+                        style={
+                            "marginLeft": "8px",
+                            "color": "#999",
+                            "fontSize": "13px",
+                        },
+                    ),
                 ],
             ),
         ],
     )
-    return control
 
 
-# Generate parameter controls
+# --- Layout Construction ---
+
 parameter_controls = []
 for param in ["ω", "δ₁", "γ₁", "δ₂", "γ₂"]:
-    min_value = param_bounds[param]["min"]
-    max_value = param_bounds[param]["max"]
-    default_value = default_params[param]
+    min_val = param_bounds[param]["min"]
+    max_val = param_bounds[param]["max"]
     step = 0.001
-    control = create_parameter_input(
-        param_name=param,
-        param_label=param,
-        min_value=min_value,
-        max_value=max_value,
-        default_value=default_value,
-        step=step,
+    parameter_controls.append(
+        create_parameter_input(
+            param, param, min_val, max_val, default_params[param], step
+        )
     )
-    parameter_controls.append(control)
 
-# Define layout
 app.layout = html.Div(
-    style={
-        "fontFamily": "Segoe UI",
-        "maxWidth": "1300px",
-        "margin": "0 auto",
-        "padding": "20px",
-    },
+    className="main-container",
     children=[
+        # Header
         html.Div(
             style={
                 "position": "relative",
-                "marginBottom": "30px",
+                "marginBottom": "50px",
                 "display": "flex",
                 "justifyContent": "center",
                 "alignItems": "center",
-                "gap": "10px",
+                "gap": "15px",
             },
             children=[
-                html.H2("Dual-Power Model Visualization", style={"margin": "0"}),
+                html.H2("Dual-Power Model Visualization"),
                 html.Button(
                     "i",
                     id="info-button",
                     n_clicks=0,
                     style={
-                        "backgroundColor": "white",
-                        "border": "2px solid black",
+                        "backgroundColor": "#fff",
+                        "border": "2px solid #333",
                         "borderRadius": "50%",
                         "fontSize": "16px",
                         "fontWeight": "bold",
-                        "width": "30px",
-                        "height": "30px",
+                        "width": "32px",
+                        "height": "32px",
                         "textAlign": "center",
                         "padding": "0",
                         "cursor": "pointer",
-                        "fontFamily": "Segoe UI",
-                        "color": "black",
-                        "lineHeight": "26px",
+                        "color": "#333",
+                        "lineHeight": "28px",
+                        "fontFamily": "Segoe UI, sans-serif",
                     },
                 ),
             ],
         ),
+        # Info Modal
         html.Div(
             id="info-modal",
             style={
                 "display": "none",
                 "position": "fixed",
-                "zIndex": 1,
+                "zIndex": 1000,
                 "left": 0,
                 "top": 0,
                 "width": "100%",
                 "height": "100%",
                 "overflow": "auto",
-                "backgroundColor": "rgba(0,0,0,0.4)",
+                "backgroundColor": "rgba(0,0,0,0.5)",
+                "backdropFilter": "blur(3px)",
             },
             children=[
                 html.Div(
                     style={
-                        "backgroundColor": "#fefefe",
-                        "margin": "15% auto",
-                        "padding": "20px",
-                        "border": "1px solid #888",
-                        "width": "80%",
-                        "maxWidth": "500px",
+                        "backgroundColor": "#fff",
+                        "margin": "10% auto",
+                        "padding": "40px",
+                        "borderRadius": "8px",
+                        "boxShadow": "0 10px 25px rgba(0,0,0,0.1)",
+                        "width": "90%",
+                        "maxWidth": "550px",
                         "position": "relative",
                     },
                     children=[
@@ -268,136 +466,189 @@ app.layout = html.Div(
                             n_clicks=0,
                             style={
                                 "position": "absolute",
-                                "top": "10px",
-                                "right": "15px",
+                                "top": "15px",
+                                "right": "20px",
                                 "background": "none",
                                 "border": "none",
                                 "fontSize": "28px",
-                                "fontWeight": "bold",
-                                "color": "#aaa",
+                                "color": "#999",
                                 "cursor": "pointer",
                             },
                         ),
-                        html.H2("Model Visualizer"),
+                        html.H2(
+                            "Model Visualizer",
+                            style={"marginTop": 0, "marginBottom": "20px"},
+                        ),
                         html.P(
                             "This application visualizes the Dual-Power Model of "
                             "subjective value and effort. Adjust the parameters to see "
                             "how they affect the valuation curve. You can also view "
-                            "predefined preference profiles from the manuscript."
+                            "predefined preference profiles from the manuscript.",
+                            style={
+                                "fontSize": "15px",
+                                "color": "#555",
+                                "lineHeight": "1.6",
+                            },
                         ),
                     ],
                 )
             ],
         ),
         dcc.Store(id="display-mode", data="custom"),
+        # Main Grid
         html.Div(
-            style={
-                "display": "flex",
-                "flexDirection": "row",
-                "justifyContent": "center",
-                "gap": "40px",
-            },
+            className="main-flex-row",
             children=[
-                # Left: Plot and Figure Description
+                # Left Column: Plot
                 html.Div(
-                    style={"width": "600px", "flexShrink": 0},
+                    className="flex-col-plot",
                     children=[
                         dcc.Graph(
                             id="sv-plot",
-                            config={"displayModeBar": False},
-                            style={"width": "600px", "height": "600px"},
+                            config={"displayModeBar": False, "responsive": True},
+                            style={"width": "100%", "height": "550px"},
                         ),
                         html.Div(
                             id="figure-description",
                             style={
-                                "marginTop": "20px",
-                                "fontSize": "14px",
+                                "marginTop": "30px",
+                                "fontSize": "15px",
+                                "color": "#444",
+                                "lineHeight": "1.7",
                                 "textAlign": "justify",
                             },
                         ),
                     ],
                 ),
-                # Middle: Equation and System Values Display
+                # Middle Column: Math & Stats
                 html.Div(
-                    style={
-                        "padding": "0 20px",
-                        "width": "400px",
-                        "flexShrink": 0,
-                        "borderLeft": "1px solid #eee",
-                        "borderRight": "1px solid #eee",
-                    },
+                    className="flex-col-middle",
                     children=[
-                        html.H4("Equation:"),
+                        html.Label("Equation:", className="section-label"),
                         html.P(
                             "sv(x) = x·[1 + (ω·(δ₁·E^γ₁) - (1-ω)·(δ₂·E^γ₂))]",
-                            style={"fontSize": "16px", "whiteSpace": "nowrap"},
+                            className="equation-box",
+                        ),
+                        html.Label(
+                            "Current Parameters:",
+                            id="current-params-label",
+                            className="section-label",
                         ),
                         html.Div(
                             id="current-params",
+                            className="stat-value",
                             style={
-                                "fontSize": "16px",
-                                "marginBottom": "20px",
-                                "whiteSpace": "nowrap",
+                                "marginBottom": "30px",
+                                "color": "#333",
+                                "fontSize": "15px",
                             },
                         ),
-                        html.Div(id="system-values", style={"fontSize": "16px"}),
-                        html.Div(id="paper-config-display", style={"fontSize": "14px"}),
+                        html.Div(id="system-values"),
+                        html.Div(id="paper-config-display"),
                         html.Div(
                             style={
-                                "marginTop": "40px",
-                                "paddingTop": "20px",
-                                "borderTop": "1px solid #eee",
+                                "marginTop": "45px",
+                                "paddingTop": "25px",
+                                "borderTop": "1px solid #eaeaea",
                             },
                             children=[
-                                html.H4("where:"),
+                                html.Label("where:", className="section-label"),
                                 html.Ul(
+                                    className="legend-list",
                                     style={
                                         "listStyleType": "none",
-                                        "margin": "0",
-                                        "paddingLeft": "40px",
+                                        "paddingLeft": "20px",
+                                        "margin": 0,
                                     },
                                     children=[
                                         html.Li(
-                                            "sv(x): subjective value relative to nominal value"
+                                            [
+                                                html.Strong("sv(x):"),
+                                                " subjective value relative to nominal value",
+                                            ]
                                         ),
-                                        html.Li("x: nominal value of outcome"),
                                         html.Li(
-                                            "E: effort level as proportion of max effort"
+                                            [
+                                                html.Strong("x:"),
+                                                " nominal value of outcome",
+                                            ]
                                         ),
-                                        html.Li("ω: relative system weight"),
-                                        html.Li("δ₁: steepness of positive system"),
-                                        html.Li("γ₁: curvature of positive system"),
-                                        html.Li("δ₂: steepness of negative system"),
-                                        html.Li("γ₂: curvature of negative system"),
+                                        html.Li(
+                                            [
+                                                html.Strong("E:"),
+                                                " effort level as proportion of max effort",
+                                            ]
+                                        ),
+                                        html.Li(
+                                            [
+                                                html.Strong("ω:"),
+                                                " relative system weight",
+                                            ]
+                                        ),
+                                        html.Li(
+                                            [
+                                                html.Strong("δ₁:"),
+                                                " steepness of positive system",
+                                            ]
+                                        ),
+                                        html.Li(
+                                            [
+                                                html.Strong("γ₁:"),
+                                                " curvature of positive system",
+                                            ]
+                                        ),
+                                        html.Li(
+                                            [
+                                                html.Strong("δ₂:"),
+                                                " steepness of negative system",
+                                            ]
+                                        ),
+                                        html.Li(
+                                            [
+                                                html.Strong("γ₂:"),
+                                                " curvature of negative system",
+                                            ]
+                                        ),
                                     ],
                                 ),
                             ],
                         ),
                     ],
                 ),
-                # Right: Parameter Controls
+                # Right Column: Controls
                 html.Div(
-                    style={"width": "220px", "flexShrink": 0},
+                    className="flex-col-params",
                     children=[
-                        html.H4("Parameters"),
-                        html.Div(style={"width": "100%"}, children=parameter_controls),
+                        html.Label("PARAMETERS:", className="section-label"),
+                        html.Div(children=parameter_controls),
+                        html.Hr(
+                            style={
+                                "border": "0",
+                                "borderTop": "1px solid #eaeaea",
+                                "margin": "35px 0 25px 0",
+                            }
+                        ),
+                        html.Label("PRESETS:", className="section-label"),
                         html.Button(
-                            "Show Figure 1 Values",
+                            "Figure 1 Values",
                             id="show-figure1-button",
                             n_clicks=0,
-                            style={"marginBottom": "10px", "width": "100%"},
+                            className="action-btn",
+                            style={"marginBottom": "12px", "width": "100%"},
                         ),
                         html.Button(
-                            "Show Figure 5 Values",
+                            "Figure 5 Values",
                             id="show-figure5-button",
                             n_clicks=0,
-                            style={"marginBottom": "10px", "width": "100%"},
+                            className="action-btn",
+                            style={"marginBottom": "12px", "width": "100%"},
                         ),
                         html.Button(
-                            "Show Custom Values",
+                            "Custom",
                             id="show-custom-button",
                             n_clicks=0,
-                            style={"marginBottom": "20px", "width": "100%"},
+                            className="action-btn action-btn-primary",
+                            style={"width": "100%"},
                         ),
                     ],
                 ),
@@ -406,25 +657,26 @@ app.layout = html.Div(
     ],
 )
 
+# --- Callbacks ---
+
 
 @app.callback(
     Output("display-mode", "data"),
-    Input("show-figure1-button", "n_clicks"),
-    Input("show-figure5-button", "n_clicks"),
-    Input("show-custom-button", "n_clicks"),
+    [
+        Input("show-figure1-button", "n_clicks"),
+        Input("show-figure5-button", "n_clicks"),
+        Input("show-custom-button", "n_clicks"),
+    ],
 )
 def update_display_mode(n_clicks_fig1, n_clicks_fig5, n_clicks_custom):
-    """Update display mode based on button clicks"""
     ctx = dash.callback_context
     if not ctx.triggered:
         return "custom"
     button_id = ctx.triggered[0]["prop_id"].split(".")[0]
     if button_id == "show-figure1-button":
         return "figure1"
-    elif button_id == "show-figure5-button":
+    if button_id == "show-figure5-button":
         return "figure5"
-    elif button_id == "show-custom-button":
-        return "custom"
     return "custom"
 
 
@@ -435,6 +687,7 @@ def update_display_mode(n_clicks_fig1, n_clicks_fig5, n_clicks_custom):
         Output("system-values", "children"),
         Output("paper-config-display", "children"),
         Output("figure-description", "children"),
+        Output("current-params-label", "style"),
     ],
     [
         Input("ω-input", "value"),
@@ -448,355 +701,349 @@ def update_display_mode(n_clicks_fig1, n_clicks_fig5, n_clicks_custom):
 def update_plot_and_values(
     omega_input, delta1_input, gamma1_input, delta2_input, gamma2_input, display_mode
 ):
-    """Update the plot and values based on parameter inputs and display mode"""
     E = np.linspace(0, 1, 100)
     x = 1
     traces = []
     figure_description = ""
+    current_params = ""
+    system_values = ""
+    paper_config_display = ""
+    label_style = {"display": "block"}
+
+    # Common layout settings
+    layout_settings = go.Layout(
+        xaxis={
+            "title": "Level of Effort",
+            "range": [0, 1],
+            "automargin": True,
+            "title_standoff": 25,
+            "zeroline": False,
+        },
+        yaxis={
+            "title": "Subjective Value",
+            "automargin": True,
+            "title_standoff": 25,
+            "zeroline": False,
+        },
+        showlegend=False,
+        margin=dict(l=80, r=30, t=20, b=50),
+        hovermode="closest",
+        template="plotly_white",
+        font=dict(family="Segoe UI, sans-serif", size=13, color="#333"),
+    )
 
     if display_mode == "custom":
-        # Handle None values
-        omega = float(omega_input) if omega_input is not None else default_params["ω"]
-        delta1 = (
-            float(delta1_input) if delta1_input is not None else default_params["δ₁"]
-        )
-        gamma1 = (
-            float(gamma1_input) if gamma1_input is not None else default_params["γ₁"]
-        )
-        delta2 = (
-            float(delta2_input) if delta2_input is not None else default_params["δ₂"]
-        )
-        gamma2 = (
-            float(gamma2_input) if gamma2_input is not None else default_params["γ₂"]
-        )
+        # Handle inputs safely
+        w = float(omega_input) if omega_input is not None else default_params["ω"]
+        d1 = float(delta1_input) if delta1_input is not None else default_params["δ₁"]
+        g1 = float(gamma1_input) if gamma1_input is not None else default_params["γ₁"]
+        d2 = float(delta2_input) if delta2_input is not None else default_params["δ₂"]
+        g2 = float(gamma2_input) if gamma2_input is not None else default_params["γ₂"]
 
-        # Compute positive system
-        positive_system = x * (1 + omega * (delta1 * E**gamma1))
-        traces.append(
+        pos_sys = x * (1 + w * (d1 * E**g1))
+        neg_sys = x * (1 - (1 - w) * (d2 * E**g2))
+        sv = x * (1 + (w * (d1 * E**g1) - (1 - w) * (d2 * E**g2)))
+
+        traces = [
             go.Scatter(
                 x=E,
-                y=positive_system,
+                y=pos_sys,
                 mode="lines",
                 name="Positive System",
-                line=dict(color="green", width=2, dash="dash"),
-                opacity=0.5,
-            )
-        )
-
-        # Compute negative system
-        negative_system = x * (1 - (1 - omega) * (delta2 * E**gamma2))
-        traces.append(
+                line=dict(color="#2ca02c", width=3, dash="dash"),
+                opacity=0.6,
+            ),
             go.Scatter(
                 x=E,
-                y=negative_system,
+                y=neg_sys,
                 mode="lines",
                 name="Negative System",
-                line=dict(color="red", width=2, dash="dash"),
-                opacity=0.5,
-            )
-        )
-
-        # Compute combined sv(x)
-        sv = x * (
-            1 + (omega * (delta1 * E**gamma1) - (1 - omega) * (delta2 * E**gamma2))
-        )
-        traces.append(
+                line=dict(color="#d62728", width=3, dash="dash"),
+                opacity=0.6,
+            ),
             go.Scatter(
                 x=E,
                 y=sv,
                 mode="lines",
                 name="Combined System",
-                line=dict(color="black", width=3),
-            )
-        )
+                line=dict(color="#1f2937", width=4),
+            ),
+        ]
+
+        # Disable plot legend in custom mode (using dots in middle col instead)
+        layout_settings.showlegend = False
 
         current_params = (
-            f"x=1, ω={omega:.3f}, δ₁={delta1:.3f}, γ₁={gamma1:.3f}, "
-            f"δ₂={delta2:.3f}, γ₂={gamma2:.3f}"
+            f"x=1, ω={w:.3f}, δ₁={d1:.3f}, γ₁={g1:.3f}, δ₂={d2:.3f}, γ₂={g2:.3f}"
         )
 
-        # Compute system values at E=0.5
-        E_mid = 0.5
-        positive_contribution = omega * (delta1 * E_mid**gamma1)
-        negative_contribution = -(1 - omega) * (delta2 * E_mid**gamma2)
-        net_effect = positive_contribution + negative_contribution
+        # Calc values at E=0.5
+        e_mid = 0.5
+        v_pos = w * (d1 * e_mid**g1)
+        v_neg = -(1 - w) * (d2 * e_mid**g2)
+        v_net = v_pos + v_neg
 
         system_values = html.Div(
             [
-                html.H4("System Values at E=0.5:"),
-                html.P(
+                # Green Dot + Positive
+                html.Div(
                     [
-                        "Weighted Positive System (ω·(δ₁·E^γ₁)): ",
                         html.Span(
-                            f"{positive_contribution:+.3f}",
-                            style={"fontWeight": "bold", "color": "green"},
+                            "● ",
+                            style={
+                                "color": "#2ca02c",
+                                "fontSize": "18px",
+                                "lineHeight": "1",
+                                "marginRight": "8px",
+                            },
                         ),
-                    ]
+                        # Added marginRight here to force spacing
+                        html.Span(
+                            "Weighted Positive System (ω·(δ₁·E^γ₁)):",
+                            style={"color": "#555", "marginRight": "8px"},
+                        ),
+                        html.Span(
+                            f"{v_pos:+.3f}",
+                            style={"color": "#2ca02c", "fontWeight": "bold"},
+                        ),
+                    ],
+                    style={
+                        "whiteSpace": "nowrap",
+                        "marginBottom": "6px",
+                        "display": "flex",
+                        "alignItems": "center",
+                    },
                 ),
-                html.P(
+                # Red Dot + Negative
+                html.Div(
                     [
-                        "Weighted Negative System (-(1-ω)·(δ₂·E^γ₂)): ",
                         html.Span(
-                            f"{negative_contribution:+.3f}",
-                            style={"fontWeight": "bold", "color": "red"},
+                            "● ",
+                            style={
+                                "color": "#d62728",
+                                "fontSize": "18px",
+                                "lineHeight": "1",
+                                "marginRight": "8px",
+                            },
                         ),
-                    ]
+                        # Added marginRight here
+                        html.Span(
+                            "Weighted Negative System (-(1-ω)·(δ₂·E^γ₂)):",
+                            style={"color": "#555", "marginRight": "8px"},
+                        ),
+                        html.Span(
+                            f"{v_neg:+.3f}",
+                            style={"color": "#d62728", "fontWeight": "bold"},
+                        ),
+                    ],
+                    style={
+                        "whiteSpace": "nowrap",
+                        "marginBottom": "6px",
+                        "display": "flex",
+                        "alignItems": "center",
+                    },
                 ),
-                html.P(
+                # Black Dot + Net
+                html.Div(
                     [
-                        "Net System Effect: ",
                         html.Span(
-                            f"{net_effect:.3f}",
-                            style={"fontWeight": "bold"},
+                            "● ",
+                            style={
+                                "color": "#1f2937",
+                                "fontSize": "18px",
+                                "lineHeight": "1",
+                                "marginRight": "8px",
+                            },
                         ),
-                    ]
+                        # Added marginRight here
+                        html.Span(
+                            "Net System Effect:",
+                            style={"color": "#555", "marginRight": "8px"},
+                        ),
+                        html.Span(
+                            f"{v_net:+.3f}",
+                            style={"fontWeight": "bold", "color": "#1f2937"},
+                        ),
+                    ],
+                    style={
+                        "whiteSpace": "nowrap",
+                        "marginBottom": "15px",
+                        "display": "flex",
+                        "alignItems": "center",
+                    },
+                ),
+                # Footnote
+                html.Div(
+                    "System Values at E=0.5",
+                    style={
+                        "fontSize": "12px",
+                        "color": "#999",
+                        "fontWeight": "bold",
+                    },
                 ),
             ]
         )
-
-        paper_config_display = ""
 
         figure_description = html.P(
             [
                 html.Strong("Interactive Mode."),
-                " Adjust the parameters using the controls on the right to explore \
-              different value function shapes. The weighted positive system (green) \
-              and negative system (red) values at E=0.5 are shown in the middle panel. \
-              Parameters can be modified using the +/- buttons or by directly entering values. \
-              The plot shows individual contributions of the positive (green) and negative (red) \
-              systems, with their combined effect in black.",
+                " Adjust the parameters using the controls on the right to explore "
+                "different value function shapes. The weighted positive system (green) "
+                "and negative system (red) values at E=0.5 are shown in the middle panel. "
+                "Parameters can be modified using the +/- buttons or by directly entering values. "
+                "The plot shows individual contributions of the positive (green) and "
+                "negative (red) systems, with their combined effect in black.",
             ]
         )
 
-    elif display_mode == "figure1":
-        # [Rest of the figure1 code remains the same]
-        colors = ["red", "green", "blue", "purple"]
-        labels = [
-            "Decreasing",
-            "Increasing",
-            "Decreasing-Increasing",
-            "Increasing-Decreasing",
-        ]
-        params_list = [html.H4("Figure 1 Presets:")]
+    else:
+        # Figure Mode
+        label_style = {"display": "none"}
+        presets = FIGURE1_PRESETS if display_mode == "figure1" else FIGURE5_PRESETS
+        colors = ["#d62728", "#2ca02c", "#1f77b4", "#9467bd"]
 
-        for idx, label in enumerate(labels):
-            params = FIGURE1_PRESETS[label]
-            delta1 = params["δ₁"]
-            delta2 = params["δ₂"]
-            gamma1 = params["γ₁"]
-            gamma2 = params["γ₂"]
-            omega = params["ω"]
-
-            sv = x * (
-                1 + (omega * (delta1 * E**gamma1) - (1 - omega) * (delta2 * E**gamma2))
+        info_items = [
+            html.Label(
+                f"{'Figure 1' if display_mode == 'figure1' else 'Figure 5'} Presets:",
+                className="section-label",
             )
+        ]
 
+        for idx, (label, p) in enumerate(presets.items()):
+            sv = x * (
+                1
+                + (
+                    p["ω"] * (p["δ₁"] * E ** p["γ₁"])
+                    - (1 - p["ω"]) * (p["δ₂"] * E ** p["γ₂"])
+                )
+            )
+            col = colors[idx % len(colors)]
             traces.append(
                 go.Scatter(
-                    x=E,
-                    y=sv,
-                    mode="lines",
-                    name=label,
-                    line=dict(color=colors[idx % len(colors)]),
+                    x=E, y=sv, mode="lines", name=label, line=dict(color=col, width=4)
                 )
             )
 
-            params_list.append(
+            info_items.append(
                 html.Div(
                     [
-                        html.H5(
-                            f"{label} Profile",
+                        html.Div(
+                            [
+                                html.Span(
+                                    "● ",
+                                    style={
+                                        "color": col,
+                                        "fontSize": "18px",
+                                        "lineHeight": "1",
+                                        "marginRight": "8px",
+                                    },
+                                ),
+                                html.H5(
+                                    f"{label} Profile",
+                                    style={
+                                        "color": "#333",
+                                        "fontSize": "15px",
+                                        "margin": 0,
+                                    },
+                                ),
+                            ],
                             style={
-                                "marginBottom": "5px",
-                                "marginTop": "15px",
-                                "color": colors[idx % len(colors)],
+                                "display": "flex",
+                                "alignItems": "center",
+                                "marginBottom": "4px",
                             },
                         ),
-                        html.P(
-                            f"x=1, ω={omega:.3f}, δ₁={delta1:.3f}, γ₁={gamma1:.3f}, "
-                            f"δ₂={delta2:.3f}, γ₂={gamma2:.3f}",
-                            style={"whiteSpace": "nowrap"},
-                        ),
-                    ]
-                )
-            )
-
-        current_params = ""
-        system_values = ""
-        paper_config_display = params_list
-        figure_description = html.P(
-            [
-                html.Strong("Figure 1."),
-                " Model explanation of different effort preference profiles. \
-             Example value function shapes that illustrate the different \
-             preference profiles accounted for under the Dual-Power (DPOWER) model.",
-            ]
-        )
-
-    elif display_mode == "figure5":
-        # [Rest of the figure5 code remains the same]
-        colors = ["red", "green", "blue", "purple"]
-        labels = [
-            "Decreasing",
-            "Increasing",
-            "Decreasing-Increasing",
-            "Increasing-Decreasing",
-        ]
-        params_list = [html.H4("Figure 5 Presets:")]
-
-        for idx, label in enumerate(labels):
-            params = FIGURE5_PRESETS[label]
-            delta1 = params["δ₁"]
-            delta2 = params["δ₂"]
-            gamma1 = params["γ₁"]
-            gamma2 = params["γ₂"]
-            omega = params["ω"]
-
-            sv = x * (
-                1 + (omega * (delta1 * E**gamma1) - (1 - omega) * (delta2 * E**gamma2))
-            )
-
-            traces.append(
-                go.Scatter(
-                    x=E,
-                    y=sv,
-                    mode="lines",
-                    name=label,
-                    line=dict(color=colors[idx % len(colors)]),
-                )
-            )
-
-            params_list.append(
-                html.Div(
-                    [
-                        html.H5(
-                            f"{label} Profile",
+                        html.Div(
+                            f"x=1, ω={p['ω']:.3f}, δ₁={p['δ₁']:.3f}, γ₁={p['γ₁']:.3f}, δ₂={p['δ₂']:.3f}, γ₂={p['γ₂']:.3f}",
+                            className="stat-value",
                             style={
-                                "marginBottom": "5px",
-                                "marginTop": "15px",
-                                "color": colors[idx % len(colors)],
+                                "fontSize": "12px",
+                                "color": "#666",
+                                "marginLeft": "22px",
                             },
                         ),
-                        html.P(
-                            f"x=1, ω={omega:.3f}, δ₁={delta1:.3f}, γ₁={gamma1:.3f}, "
-                            f"δ₂={delta2:.3f}, γ₂={gamma2:.3f}",
-                            style={"whiteSpace": "nowrap"},
-                        ),
-                    ]
+                    ],
+                    style={"marginBottom": "18px"},
                 )
             )
 
-        current_params = ""
-        system_values = ""
-        paper_config_display = params_list
-        figure_description = html.P(
-            [
-                html.Strong("Figure 5."),
-                " Example value functions based on individual parameter estimates \
-              of the Dual-Power (DPOWER) model. Shown are value functions that \
-              decrease or increase monotonically (decreasing or increasing profile, \
-              respectively), or initially decrease or increase and then reverse \
-              in evaluation after given effort is reached (decreasing-increasing \
-              or increasing-decreasing profile).",
-            ]
-        )
+        paper_config_display = html.Div(info_items)
 
-    # Create figure
-    figure = {
-        "data": traces,
-        "layout": go.Layout(
-            xaxis={
-                "title": "Level of Effort",
-                "range": [0, 1],
-            },
-            yaxis={"title": "Subjective Value"},
-            showlegend=False,
-            width=600,
-            height=600,
-            hovermode="closest",
-        ),
-    }
+        fig_label = "Figure 1." if display_mode == "figure1" else "Figure 5."
+
+        if display_mode == "figure1":
+            desc_text = " Model explanation of different effort preference profiles. Example value function shapes that illustrate the different preference profiles accounted for under the Dual-Power (DPOWER) model."
+        else:
+            desc_text = " Example value functions based on individual parameter estimates of the Dual-Power (DPOWER) model. Shown are value functions that decrease or increase monotonically (decreasing or increasing profile, respectively), or initially decrease or increase and then reverse in evaluation after given effort is reached (decreasing-increasing or increasing-decreasing profile)."
+
+        figure_description = html.P([html.Strong(fig_label), desc_text])
 
     return (
-        figure,
+        {"data": traces, "layout": layout_settings},
         current_params,
         system_values,
         paper_config_display,
         figure_description,
+        label_style,
     )
 
 
-# Callbacks for increment and decrement buttons
-increment_values = {"ω": 0.1, "δ₁": 0.1, "γ₁": 0.1, "δ₂": 0.1, "γ₂": 0.1}
-
-
-def create_increment_decrement_callback(param_name):
+# Increment/Decrement Callbacks
+def create_callback(param):
     @app.callback(
-        Output(f"{param_name}-input", "value"),
-        Input(f"{param_name}-increment", "n_clicks"),
-        Input(f"{param_name}-decrement", "n_clicks"),
-        State(f"{param_name}-input", "value"),
+        Output(f"{param}-input", "value"),
+        [
+            Input(f"{param}-increment", "n_clicks"),
+            Input(f"{param}-decrement", "n_clicks"),
+        ],
+        [State(f"{param}-input", "value")],
         prevent_initial_call=True,
     )
-    def update_param(increment_clicks, decrement_clicks, current_value):
+    def update(inc, dec, val):
         ctx = dash.callback_context
-        if not ctx.triggered or current_value is None:
-            return current_value
+        if not ctx.triggered or val is None:
+            return val
+        btn = ctx.triggered[0]["prop_id"].split(".")[0]
 
-        button_id = ctx.triggered[0]["prop_id"].split(".")[0]
-        increment = increment_values[param_name]
-        new_value = current_value
-        if button_id == f"{param_name}-increment":
-            new_value += increment
-        elif button_id == f"{param_name}-decrement":
-            new_value -= increment
+        step = 0.1  # Button step size
+        new_val = val + step if "increment" in btn else val - step
 
-        # Enforce min/max bounds
-        min_value = param_bounds[param_name]["min"]
-        max_value = param_bounds[param_name]["max"]
-        new_value = max(min_value, min(new_value, max_value))
-
-        # Round new_value to 3 decimal places
-        new_value = round(new_value, 3)
-
-        return new_value
+        # Clip
+        mn, mx = param_bounds[param]["min"], param_bounds[param]["max"]
+        return round(max(mn, min(mx, new_val)), 3)
 
 
-# Create callbacks for each parameter
-for param in ["ω", "δ₁", "γ₁", "δ₂", "γ₂"]:
-    create_increment_decrement_callback(param)
+for p in ["ω", "δ₁", "γ₁", "δ₂", "γ₂"]:
+    create_callback(p)
 
 
-# Callback for Info Modal
+# Modal Callback
 @app.callback(
     Output("info-modal", "style"),
     [Input("info-button", "n_clicks"), Input("close-info-modal", "n_clicks")],
     [State("info-modal", "style")],
 )
-def toggle_info_modal(open_clicks, close_clicks, current_style):
-    """Toggle the display of the info modal"""
-    if current_style is None:
-        current_style = {"display": "none"}
-    ctx = dash.callback_context
-    if not ctx.triggered:
-        return current_style
-    button_id = ctx.triggered[0]["prop_id"].split(".")[0]
-    if button_id == "info-button":
-        return {
+def toggle_modal(open_clicks, close_clicks, style):
+    if not dash.callback_context.triggered:
+        return style or {"display": "none"}
+    is_open = style and style.get("display") == "block"
+    return (
+        {"display": "none"}
+        if is_open
+        else {
             "display": "block",
             "position": "fixed",
-            "zIndex": 1,
+            "zIndex": 1000,
             "left": 0,
             "top": 0,
             "width": "100%",
             "height": "100%",
             "overflow": "auto",
-            "backgroundColor": "rgba(0,0,0,0.4)",
+            "backgroundColor": "rgba(0,0,0,0.5)",
+            "backdropFilter": "blur(3px)",
         }
-    elif button_id == "close-info-modal":
-        return {"display": "none"}
-    return current_style
+    )
 
 
 if __name__ == "__main__":
-    app.run_server(debug=True)
+    app.run(debug=True)

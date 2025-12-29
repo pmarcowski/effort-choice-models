@@ -1,4 +1,12 @@
-dash==2.18.1
-plotly==5.24.1
-numpy==2.0.2
-gunicorn==21.2.0
+# ============================================
+# requirements.txt  (Python 3.11)
+# Install:
+#   conda create -n <name> python=3.11
+#   conda activate <name>
+#   pip install -r requirements.txt
+# ============================================
+
+dash
+plotly
+numpy
+gunicorn
