@@ -43,3 +43,12 @@
 
 # RStudio Connect folder
 rsconnect/
+
+# Python cache
+__pycache__/
+
+# Posit Publisher records
+.posit/
+
+# Windows folder settings
+desktop.ini
