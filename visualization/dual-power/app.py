@@ -13,6 +13,8 @@ __author__ = "Przemyslaw Marcowski"
 __email__ = "p.marcowski@gmail.com"
 __license__ = "GPL 3.0"
 
+import re
+
 import numpy as np
 import dash
 from dash import dcc, html
@@ -21,220 +23,6 @@ import plotly.graph_objs as go
 
 # Initialize app
 app = dash.Dash(__name__, title="Model Visualizer")
-server = app.server
-
-# Modify index string to include custom CSS
-app.index_string = """
-<!DOCTYPE html>
-<html>
-    <head>
-        {%metas%}
-        <title>{%title%}</title>
-        {%favicon%}
-        {%css%}
-        <style>
-            /* --- Base Styles --- */
-            body {
-                font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
-                margin: 0;
-                padding: 0;
-                background: #ffffff;
-                color: #222;
-                -webkit-font-smoothing: antialiased;
-            }
-
-            p, li, div { line-height: 1.6; color: #333; }
-            h2 { font-weight: 600; color: #111; margin-top: 0; margin-bottom: 0; letter-spacing: -0.5px; }
-            h4 { font-weight: 600; color: #333; margin-top: 0; margin-bottom: 12px; font-size: 18px; }
-            h5 { font-weight: 600; margin-bottom: 0.25rem; margin-top: 0; font-size: 15px; }
-
-            /* --- Layout Grid --- */
-            .main-container {
-                max-width: 1400px;
-                margin: 0 auto;
-                padding: 40px;
-            }
-
-            .main-flex-row {
-                display: flex;
-                flex-direction: row;
-                justify-content: center;
-                align-items: flex-start;
-                gap: 0;
-                width: 100%;
-                box-sizing: border-box;
-            }
-
-            /* --- Columns --- */
-            
-            /* Plot Column */
-            .flex-col-plot {
-                flex: 1 1 550px;
-                min-width: 320px;
-                box-sizing: border-box;
-                padding-right: 50px;
-            }
-
-            /* Middle Column: Math & Stats */
-            .flex-col-middle {
-                flex: 0 1 auto;
-                min-width: 400px;
-                box-sizing: border-box;
-                border-left: 1px solid #e5e5e5;
-                border-right: 1px solid #e5e5e5;
-                padding: 0 45px;
-            }
-
-            /* Controls Column */
-            .flex-col-params {
-                flex: 0 0 280px;
-                box-sizing: border-box;
-                padding-left: 45px;
-            }
-
-            /* --- Typography Components --- */
-            
-            .section-label {
-                font-size: 12px;
-                font-weight: 700;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-                color: #777;
-                margin-bottom: 15px;
-                margin-top: 30px;
-                display: block;
-            }
-            .section-label:first-child { margin-top: 0; }
-
-            /* Equation Box Styling - RESTORED */
-            .equation-box {
-                font-family: "Times New Roman", Times, serif;
-                font-size: 20px;
-                font-style: italic;
-                background: #f9f9f9;
-                padding: 18px 24px;
-                border-radius: 6px;
-                border: 1px solid #e0e0e0;
-                text-align: center;
-                margin-bottom: 25px;
-                color: #111;
-            }
-
-            .stat-value {
-                font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
-                font-size: 14px;
-                color: #333;
-            }
-
-            .legend-list li {
-                margin-bottom: 6px;
-                font-size: 14px;
-                color: #555;
-            }
-            .legend-list strong {
-                color: #222;
-                font-weight: 600;
-                margin-right: 4px;
-            }
-
-            /* --- UI Components --- */
-
-            /* Parameter Buttons (+/-) */
-            .param-btn {
-                background-color: #fff;
-                border: 1px solid #d1d5db;
-                border-radius: 4px;
-                color: #555;
-                font-weight: bold;
-                font-size: 14px;
-                width: 30px;
-                height: 30px;
-                cursor: pointer;
-                transition: all 0.1s ease;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                padding: 0;
-            }
-            .param-btn:hover { background-color: #f3f4f6; border-color: #9ca3af; color: #111; }
-            .param-btn:active { background-color: #e5e7eb; }
-
-            /* Inputs */
-            .param-input input {
-                border: 1px solid #d1d5db;
-                border-radius: 4px;
-                padding: 4px;
-                color: #111;
-                font-family: "SFMono-Regular", Consolas, monospace;
-                font-weight: 600;
-                font-size: 15px;
-                background: #fff;
-                height: 30px;
-                box-sizing: border-box;
-            }
-            .param-input input:focus { outline: none; border-color: #333; }
-            
-            /* Action Buttons */
-            .action-btn {
-                background-color: #fff;
-                border: 1px solid #d1d5db;
-                color: #374151;
-                padding: 10px 16px;
-                border-radius: 6px;
-                font-size: 14px;
-                font-weight: 600;
-                cursor: pointer;
-                transition: all 0.1s ease;
-                text-align: center;
-                font-family: inherit;
-            }
-            .action-btn:hover { background-color: #f3f4f6; border-color: #9ca3af; color: #111; }
-            
-            /* Primary Button */
-            .action-btn-primary {
-                background-color: #222;
-                border: 1px solid #222;
-                color: #fff;
-            }
-            .action-btn-primary:hover { background-color: #444; border-color: #444; color: #fff; }
-
-            /* --- Mobile Responsiveness (< 1100px) --- */
-            @media (max-width: 1100px) {
-                .main-container { padding: 20px; }
-                .main-flex-row {
-                    flex-direction: column;
-                    gap: 40px;
-                    align-items: center;
-                }
-                .flex-col-plot, .flex-col-middle, .flex-col-params {
-                    width: 100%;
-                    max-width: 700px;
-                    padding: 0;
-                    border: none;
-                }
-                .flex-col-middle {
-                    border-top: 1px solid #eee;
-                    border-bottom: 1px solid #eee;
-                    padding: 30px 0;
-                }
-            }
-            
-            /* Hide spinner arrows */
-            input[type=number]::-webkit-outer-spin-button,
-            input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-            input[type=number] { -moz-appearance: textfield; }
-        </style>
-    </head>
-    <body>
-        {%app_entry%}
-        <footer>
-            {%config%}
-            {%scripts%}
-            {%renderer%}
-        </footer>
-    </body>
-</html>
-"""
 
 # --- Data Presets (Normalized Order) ---
 
@@ -287,95 +75,118 @@ param_bounds = {
     "γ₂": {"min": 0, "max": 100},
 }
 
+PARAMS = ["ω", "δ₁", "γ₁", "δ₂", "γ₂"]
+
+PARAM_DESCRIPTIONS = {
+    "ω": "System weight",
+    "δ₁": "Positive steepness",
+    "γ₁": "Positive curvature",
+    "δ₂": "Negative steepness",
+    "γ₂": "Negative curvature",
+}
+
+LEGEND = [
+    ("sv(x):", " subjective value relative to nominal value"),
+    ("x:", " nominal value of outcome"),
+    ("E:", " effort level as proportion of max effort"),
+    ("ω:", " relative system weight"),
+    ("δ₁:", " steepness of positive system"),
+    ("γ₁:", " curvature of positive system"),
+    ("δ₂:", " steepness of negative system"),
+    ("γ₂:", " curvature of negative system"),
+]
+
+# --- Colors ---
+
+# A figure cannot read the stylesheet, so the chart repeats its tokens here.
+CHART_INK = "#14161A"
+CHART_SUBTLE = "#5C6169"
+CHART_HAIRLINE = "rgba(20, 22, 26, 0.12)"
+CHART_FONT = '"Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif'
+
+# Each curve has one color, shared by its line and its dot.
+SYSTEM_COLORS = {"positive": "#15983D", "negative": "#A73030", "combined": CHART_INK}
+PROFILE_COLORS = ["#A73030", "#15983D", "#0C5BB0", "#9C6ADE"]
+
+# A parameter symbol wears the color of the system it shapes, and the system
+# weight stays black like the combined curve. The green is darker than the
+# curve's, because text needs more contrast than a line.
+SYMBOL_COLORS = {"positive": "#0F7A30", "negative": SYSTEM_COLORS["negative"]}
+SYMBOL_CLASSES = {
+    "ω": "sym sym-weight",
+    "δ₁": "sym sym-positive",
+    "γ₁": "sym sym-positive",
+    "δ₂": "sym sym-negative",
+    "γ₂": "sym sym-negative",
+}
+SYMBOL_PATTERN = re.compile("(" + "|".join(SYMBOL_CLASSES) + ")")
+
 # --- Helper Functions ---
 
 
-def create_parameter_input(
-    param_name, param_label, min_value, max_value, default_value, step
-):
-    """Create a styled parameter input control."""
-    descriptions = {
-        "ω": "System weight",
-        "δ₁": "Positive steepness",
-        "γ₁": "Positive curvature",
-        "δ₂": "Negative steepness",
-        "γ₂": "Negative curvature",
-    }
+def weighted_systems(E, w, d1, g1, d2, g2):
+    """Return the weighted positive and negative system terms at effort E."""
+    return w * (d1 * E**g1), (1 - w) * (d2 * E**g2)
 
+
+def mark_symbols(text):
+    """Split text into children, wrapping each parameter symbol in a styled span."""
+    return [
+        html.Span(part, className=SYMBOL_CLASSES[part]) if part in SYMBOL_CLASSES else part
+        for part in SYMBOL_PATTERN.split(text)
+        if part
+    ]
+
+
+def format_signed(value):
+    """Format a system value with its sign, printing zero as +0.000."""
+    text = f"{value:+.3f}"
+    return "+0.000" if text == "-0.000" else text
+
+
+def create_parameter_input(param, min_value, max_value, default_value, step):
+    """Create a parameter input control."""
     return html.Div(
-        style={"marginBottom": "24px"},
+        className="param",
         children=[
             # Label Row (Symbol + Description)
-            html.Div(
+            html.Label(
+                htmlFor=f"{param}-input",
+                className="param-label",
                 children=[
-                    html.Span(
-                        param_label,
-                        style={
-                            "fontSize": "18px",
-                            "fontWeight": "700",
-                            "marginRight": "8px",
-                        },
-                    ),
-                    html.Span(
-                        descriptions[param_label],
-                        style={"fontSize": "15px", "color": "#666"},
-                    ),
+                    html.Span(param, className=f"param-symbol {SYMBOL_CLASSES[param]}"),
+                    html.Span(PARAM_DESCRIPTIONS[param], className="param-desc"),
                 ],
-                style={"marginBottom": "8px"},
             ),
             # Controls Row (Min - Btn - Input - Btn - Max)
             html.Div(
-                style={
-                    "display": "flex",
-                    "alignItems": "center",
-                    "whiteSpace": "nowrap",
-                },
+                className="param-row",
                 children=[
-                    html.Label(
-                        f"{min_value}",
-                        style={
-                            "marginRight": "8px",
-                            "color": "#999",
-                            "fontSize": "13px",
-                            "minWidth": "10px",
-                        },
-                    ),
+                    html.Span(f"{min_value}", className="param-bound"),
                     html.Button(
                         "-",
-                        id=f"{param_name}-decrement",
+                        id=f"{param}-decrement",
                         n_clicks=0,
                         className="param-btn",
                     ),
                     dcc.Input(
-                        id=f"{param_name}-input",
+                        id=f"{param}-input",
                         type="number",
                         min=min_value,
                         max=max_value,
                         step=step,
                         value=default_value,
                         className="param-input",
-                        style={
-                            "width": "60px",
-                            "textAlign": "center",
-                            "margin": "0 6px",
-                        },
                         persistence=True,
                         required=False,
                     ),
                     html.Button(
                         "+",
-                        id=f"{param_name}-increment",
+                        id=f"{param}-increment",
                         n_clicks=0,
                         className="param-btn",
                     ),
-                    html.Label(
-                        f"max: {max_value}",
-                        style={
-                            "marginLeft": "8px",
-                            "color": "#999",
-                            "fontSize": "13px",
-                        },
-                    ),
+                    html.Span(f"max: {max_value}", className="param-bound"),
                 ],
             ),
         ],
@@ -384,271 +195,143 @@ def create_parameter_input(
 
 # --- Layout Construction ---
 
-parameter_controls = []
-for param in ["ω", "δ₁", "γ₁", "δ₂", "γ₂"]:
-    min_val = param_bounds[param]["min"]
-    max_val = param_bounds[param]["max"]
-    step = 0.001
-    parameter_controls.append(
-        create_parameter_input(
-            param, param, min_val, max_val, default_params[param], step
-        )
+parameter_controls = [
+    create_parameter_input(
+        param,
+        param_bounds[param]["min"],
+        param_bounds[param]["max"],
+        default_params[param],
+        step=0.001,
     )
+    for param in PARAMS
+]
 
 app.layout = html.Div(
-    className="main-container",
+    className="app",
+    style={
+        "--sym-positive": SYMBOL_COLORS["positive"],
+        "--sym-negative": SYMBOL_COLORS["negative"],
+    },
     children=[
         # Header
-        html.Div(
-            style={
-                "position": "relative",
-                "marginBottom": "50px",
-                "display": "flex",
-                "justifyContent": "center",
-                "alignItems": "center",
-                "gap": "15px",
-            },
+        html.Header(
+            className="masthead",
             children=[
-                html.H2("Dual-Power Model Visualization"),
+                html.H1("Dual-Power Model Visualization", className="title"),
                 html.Button(
-                    "i",
+                    "?",
                     id="info-button",
                     n_clicks=0,
-                    style={
-                        "backgroundColor": "#fff",
-                        "border": "2px solid #333",
-                        "borderRadius": "50%",
-                        "fontSize": "16px",
-                        "fontWeight": "bold",
-                        "width": "32px",
-                        "height": "32px",
-                        "textAlign": "center",
-                        "padding": "0",
-                        "cursor": "pointer",
-                        "color": "#333",
-                        "lineHeight": "28px",
-                        "fontFamily": "Segoe UI, sans-serif",
-                    },
+                    className="info-btn",
+                    **{"aria-haspopup": "dialog", "aria-controls": "info-modal"},
                 ),
             ],
         ),
         # Info Modal
         html.Div(
             id="info-modal",
-            style={
-                "display": "none",
-                "position": "fixed",
-                "zIndex": 1000,
-                "left": 0,
-                "top": 0,
-                "width": "100%",
-                "height": "100%",
-                "overflow": "auto",
-                "backgroundColor": "rgba(0,0,0,0.5)",
-                "backdropFilter": "blur(3px)",
-            },
+            className="modal",
+            style={"display": "none"},
+            role="dialog",
+            **{"aria-modal": "true", "aria-labelledby": "info-title"},
             children=[
                 html.Div(
-                    style={
-                        "backgroundColor": "#fff",
-                        "margin": "10% auto",
-                        "padding": "40px",
-                        "borderRadius": "8px",
-                        "boxShadow": "0 10px 25px rgba(0,0,0,0.1)",
-                        "width": "90%",
-                        "maxWidth": "550px",
-                        "position": "relative",
-                    },
+                    className="modal-card",
                     children=[
                         html.Button(
                             "×",
                             id="close-info-modal",
                             n_clicks=0,
-                            style={
-                                "position": "absolute",
-                                "top": "15px",
-                                "right": "20px",
-                                "background": "none",
-                                "border": "none",
-                                "fontSize": "28px",
-                                "color": "#999",
-                                "cursor": "pointer",
-                            },
+                            className="modal-close",
                         ),
-                        html.H2(
-                            "Model Visualizer",
-                            style={"marginTop": 0, "marginBottom": "20px"},
-                        ),
+                        html.H2("Model Visualizer", id="info-title", className="modal-title"),
                         html.P(
                             "This application visualizes the Dual-Power Model of "
                             "subjective value and effort. Adjust the parameters to see "
                             "how they affect the valuation curve. You can also view "
                             "predefined preference profiles from the manuscript.",
-                            style={
-                                "fontSize": "15px",
-                                "color": "#555",
-                                "lineHeight": "1.6",
-                            },
                         ),
                     ],
                 )
             ],
         ),
         dcc.Store(id="display-mode", data="custom"),
-        # Main Grid
-        html.Div(
-            className="main-flex-row",
+        # Three zones on wide screens: plot and caption, model, controls
+        html.Main(
+            className="zones",
             children=[
-                # Left Column: Plot
+                # Plot (the graph fills the height the stylesheet gives its wrapper)
                 html.Div(
-                    className="flex-col-plot",
-                    children=[
-                        dcc.Graph(
-                            id="sv-plot",
-                            config={"displayModeBar": False, "responsive": True},
-                            style={"width": "100%", "height": "550px"},
-                        ),
-                        html.Div(
-                            id="figure-description",
-                            style={
-                                "marginTop": "30px",
-                                "fontSize": "15px",
-                                "color": "#444",
-                                "lineHeight": "1.7",
-                                "textAlign": "justify",
-                            },
-                        ),
-                    ],
+                    className="plot",
+                    children=dcc.Graph(
+                        id="sv-plot",
+                        config={"displayModeBar": False, "responsive": True},
+                    ),
                 ),
-                # Middle Column: Math & Stats
-                html.Div(
-                    className="flex-col-middle",
+                # Controls
+                html.Section(
+                    id="controls",
+                    className="controls mode-custom",
                     children=[
-                        html.Label("Equation:", className="section-label"),
-                        html.P(
-                            "sv(x) = x·[1 + (ω·(δ₁·E^γ₁) - (1-ω)·(δ₂·E^γ₂))]",
-                            className="equation-box",
-                        ),
-                        html.Label(
-                            "Current Parameters:",
-                            id="current-params-label",
-                            className="section-label",
-                        ),
+                        html.H2("PARAMETERS:", className="section-label"),
+                        *parameter_controls,
+                        html.H2("PRESETS:", className="section-label"),
                         html.Div(
-                            id="current-params",
-                            className="stat-value",
-                            style={
-                                "marginBottom": "30px",
-                                "color": "#333",
-                                "fontSize": "15px",
-                            },
-                        ),
-                        html.Div(id="system-values"),
-                        html.Div(id="paper-config-display"),
-                        html.Div(
-                            style={
-                                "marginTop": "45px",
-                                "paddingTop": "25px",
-                                "borderTop": "1px solid #eaeaea",
-                            },
+                            className="presets",
                             children=[
-                                html.Label("where:", className="section-label"),
-                                html.Ul(
-                                    className="legend-list",
-                                    style={
-                                        "listStyleType": "none",
-                                        "paddingLeft": "20px",
-                                        "margin": 0,
-                                    },
-                                    children=[
-                                        html.Li(
-                                            [
-                                                html.Strong("sv(x):"),
-                                                " subjective value relative to nominal value",
-                                            ]
-                                        ),
-                                        html.Li(
-                                            [
-                                                html.Strong("x:"),
-                                                " nominal value of outcome",
-                                            ]
-                                        ),
-                                        html.Li(
-                                            [
-                                                html.Strong("E:"),
-                                                " effort level as proportion of max effort",
-                                            ]
-                                        ),
-                                        html.Li(
-                                            [
-                                                html.Strong("ω:"),
-                                                " relative system weight",
-                                            ]
-                                        ),
-                                        html.Li(
-                                            [
-                                                html.Strong("δ₁:"),
-                                                " steepness of positive system",
-                                            ]
-                                        ),
-                                        html.Li(
-                                            [
-                                                html.Strong("γ₁:"),
-                                                " curvature of positive system",
-                                            ]
-                                        ),
-                                        html.Li(
-                                            [
-                                                html.Strong("δ₂:"),
-                                                " steepness of negative system",
-                                            ]
-                                        ),
-                                        html.Li(
-                                            [
-                                                html.Strong("γ₂:"),
-                                                " curvature of negative system",
-                                            ]
-                                        ),
-                                    ],
+                                html.Button(
+                                    "Figure 1 Values",
+                                    id="show-figure1-button",
+                                    n_clicks=0,
+                                    className="preset-btn",
+                                ),
+                                html.Button(
+                                    "Figure 5 Values",
+                                    id="show-figure5-button",
+                                    n_clicks=0,
+                                    className="preset-btn",
+                                ),
+                                html.Button(
+                                    "Custom",
+                                    id="show-custom-button",
+                                    n_clicks=0,
+                                    className="preset-btn",
                                 ),
                             ],
                         ),
                     ],
                 ),
-                # Right Column: Controls
-                html.Div(
-                    className="flex-col-params",
+                # Caption
+                html.Div(id="figure-description", className="caption"),
+                # Model: Math & Stats
+                html.Section(
+                    className="model",
                     children=[
-                        html.Label("PARAMETERS:", className="section-label"),
-                        html.Div(children=parameter_controls),
-                        html.Hr(
-                            style={
-                                "border": "0",
-                                "borderTop": "1px solid #eaeaea",
-                                "margin": "35px 0 25px 0",
-                            }
+                        html.H2("Equation:", className="section-label"),
+                        html.P(
+                            mark_symbols("sv(x) = x·[1 + (ω·(δ₁·E^γ₁) - (1-ω)·(δ₂·E^γ₂))]"),
+                            className="equation",
                         ),
-                        html.Label("PRESETS:", className="section-label"),
-                        html.Button(
-                            "Figure 1 Values",
-                            id="show-figure1-button",
-                            n_clicks=0,
-                            className="action-btn",
-                            style={"marginBottom": "12px", "width": "100%"},
+                        html.H2(
+                            "Current Parameters:",
+                            id="current-params-label",
+                            className="section-label",
                         ),
-                        html.Button(
-                            "Figure 5 Values",
-                            id="show-figure5-button",
-                            n_clicks=0,
-                            className="action-btn",
-                            style={"marginBottom": "12px", "width": "100%"},
-                        ),
-                        html.Button(
-                            "Custom",
-                            id="show-custom-button",
-                            n_clicks=0,
-                            className="action-btn action-btn-primary",
-                            style={"width": "100%"},
+                        html.Div(id="current-params", className="param-line"),
+                        html.Div(id="system-values"),
+                        html.Div(id="paper-config-display"),
+                        html.Div(
+                            className="where",
+                            children=[
+                                html.H2("where:", className="section-label"),
+                                html.Ul(
+                                    className="legend-list",
+                                    children=[
+                                        html.Li([html.Strong(mark_symbols(term)), text])
+                                        for term, text in LEGEND
+                                    ],
+                                ),
+                            ],
                         ),
                     ],
                 ),
@@ -678,6 +361,12 @@ def update_display_mode(n_clicks_fig1, n_clicks_fig5, n_clicks_custom):
     if button_id == "show-figure5-button":
         return "figure5"
     return "custom"
+
+
+@app.callback(Output("controls", "className"), Input("display-mode", "data"))
+def mark_active_mode(display_mode):
+    """Expose the mode as a class, so the stylesheet can mark the active preset."""
+    return f"controls mode-{display_mode}"
 
 
 @app.callback(
@@ -711,25 +400,25 @@ def update_plot_and_values(
     label_style = {"display": "block"}
 
     # Common layout settings
+    axis_style = {
+        "automargin": True,
+        "title_standoff": 14,
+        "zeroline": False,
+        "gridcolor": CHART_HAIRLINE,
+        "linecolor": CHART_HAIRLINE,
+        "tickfont": {"color": CHART_SUBTLE},
+        "title_font": {"color": CHART_SUBTLE},
+    }
     layout_settings = go.Layout(
-        xaxis={
-            "title": "Level of Effort",
-            "range": [0, 1],
-            "automargin": True,
-            "title_standoff": 25,
-            "zeroline": False,
-        },
-        yaxis={
-            "title": "Subjective Value",
-            "automargin": True,
-            "title_standoff": 25,
-            "zeroline": False,
-        },
+        xaxis={"title": "Level of Effort", "range": [0, 1], **axis_style},
+        yaxis={"title": "Subjective Value", **axis_style},
         showlegend=False,
-        margin=dict(l=80, r=30, t=20, b=50),
+        margin=dict(l=56, r=12, t=12, b=48),
         hovermode="closest",
         template="plotly_white",
-        font=dict(family="Segoe UI, sans-serif", size=13, color="#333"),
+        paper_bgcolor="rgba(0, 0, 0, 0)",
+        plot_bgcolor="rgba(0, 0, 0, 0)",
+        font=dict(family=CHART_FONT, size=14, color=CHART_INK),
     )
 
     if display_mode == "custom":
@@ -740,9 +429,10 @@ def update_plot_and_values(
         d2 = float(delta2_input) if delta2_input is not None else default_params["δ₂"]
         g2 = float(gamma2_input) if gamma2_input is not None else default_params["γ₂"]
 
-        pos_sys = x * (1 + w * (d1 * E**g1))
-        neg_sys = x * (1 - (1 - w) * (d2 * E**g2))
-        sv = x * (1 + (w * (d1 * E**g1) - (1 - w) * (d2 * E**g2)))
+        positive, negative = weighted_systems(E, w, d1, g1, d2, g2)
+        pos_sys = x * (1 + positive)
+        neg_sys = x * (1 - negative)
+        sv = x * (1 + (positive - negative))
 
         traces = [
             go.Scatter(
@@ -750,138 +440,54 @@ def update_plot_and_values(
                 y=pos_sys,
                 mode="lines",
                 name="Positive System",
-                line=dict(color="#2ca02c", width=3, dash="dash"),
-                opacity=0.6,
+                line=dict(color=SYSTEM_COLORS["positive"], width=2, dash="dash"),
             ),
             go.Scatter(
                 x=E,
                 y=neg_sys,
                 mode="lines",
                 name="Negative System",
-                line=dict(color="#d62728", width=3, dash="dash"),
-                opacity=0.6,
+                line=dict(color=SYSTEM_COLORS["negative"], width=2, dash="dash"),
             ),
             go.Scatter(
                 x=E,
                 y=sv,
                 mode="lines",
                 name="Combined System",
-                line=dict(color="#1f2937", width=4),
+                line=dict(color=SYSTEM_COLORS["combined"], width=3),
             ),
         ]
 
-        # Disable plot legend in custom mode (using dots in middle col instead)
-        layout_settings.showlegend = False
-
-        current_params = (
+        current_params = mark_symbols(
             f"x=1, ω={w:.3f}, δ₁={d1:.3f}, γ₁={g1:.3f}, δ₂={d2:.3f}, γ₂={g2:.3f}"
         )
 
         # Calc values at E=0.5
         e_mid = 0.5
-        v_pos = w * (d1 * e_mid**g1)
-        v_neg = -(1 - w) * (d2 * e_mid**g2)
+        v_pos, v_neg = weighted_systems(e_mid, w, d1, g1, d2, g2)
+        v_neg = -v_neg
         v_net = v_pos + v_neg
 
+        # The dots double as the plot's legend
+        rows = [
+            ("positive", "Weighted Positive System (ω·(δ₁·E^γ₁)):", v_pos),
+            ("negative", "Weighted Negative System (-(1-ω)·(δ₂·E^γ₂)):", v_neg),
+            ("combined", "Net System Effect:", v_net),
+        ]
         system_values = html.Div(
-            [
-                # Green Dot + Positive
+            className="readout",
+            children=[
                 html.Div(
-                    [
-                        html.Span(
-                            "● ",
-                            style={
-                                "color": "#2ca02c",
-                                "fontSize": "18px",
-                                "lineHeight": "1",
-                                "marginRight": "8px",
-                            },
-                        ),
-                        # Added marginRight here to force spacing
-                        html.Span(
-                            "Weighted Positive System (ω·(δ₁·E^γ₁)):",
-                            style={"color": "#555", "marginRight": "8px"},
-                        ),
-                        html.Span(
-                            f"{v_pos:+.3f}",
-                            style={"color": "#2ca02c", "fontWeight": "bold"},
-                        ),
+                    className="readout-row",
+                    children=[
+                        html.Span("● ", style={"color": SYSTEM_COLORS[key]}),
+                        html.Span(mark_symbols(label), className="readout-label"),
+                        html.Span(format_signed(value), className="readout-value"),
                     ],
-                    style={
-                        "whiteSpace": "nowrap",
-                        "marginBottom": "6px",
-                        "display": "flex",
-                        "alignItems": "center",
-                    },
-                ),
-                # Red Dot + Negative
-                html.Div(
-                    [
-                        html.Span(
-                            "● ",
-                            style={
-                                "color": "#d62728",
-                                "fontSize": "18px",
-                                "lineHeight": "1",
-                                "marginRight": "8px",
-                            },
-                        ),
-                        # Added marginRight here
-                        html.Span(
-                            "Weighted Negative System (-(1-ω)·(δ₂·E^γ₂)):",
-                            style={"color": "#555", "marginRight": "8px"},
-                        ),
-                        html.Span(
-                            f"{v_neg:+.3f}",
-                            style={"color": "#d62728", "fontWeight": "bold"},
-                        ),
-                    ],
-                    style={
-                        "whiteSpace": "nowrap",
-                        "marginBottom": "6px",
-                        "display": "flex",
-                        "alignItems": "center",
-                    },
-                ),
-                # Black Dot + Net
-                html.Div(
-                    [
-                        html.Span(
-                            "● ",
-                            style={
-                                "color": "#1f2937",
-                                "fontSize": "18px",
-                                "lineHeight": "1",
-                                "marginRight": "8px",
-                            },
-                        ),
-                        # Added marginRight here
-                        html.Span(
-                            "Net System Effect:",
-                            style={"color": "#555", "marginRight": "8px"},
-                        ),
-                        html.Span(
-                            f"{v_net:+.3f}",
-                            style={"fontWeight": "bold", "color": "#1f2937"},
-                        ),
-                    ],
-                    style={
-                        "whiteSpace": "nowrap",
-                        "marginBottom": "15px",
-                        "display": "flex",
-                        "alignItems": "center",
-                    },
-                ),
-                # Footnote
-                html.Div(
-                    "System Values at E=0.5",
-                    style={
-                        "fontSize": "12px",
-                        "color": "#999",
-                        "fontWeight": "bold",
-                    },
-                ),
+                )
+                for key, label, value in rows
             ]
+            + [html.Div("System Values at E=0.5", className="readout-note")],
         )
 
         figure_description = html.P(
@@ -900,70 +506,44 @@ def update_plot_and_values(
         # Figure Mode
         label_style = {"display": "none"}
         presets = FIGURE1_PRESETS if display_mode == "figure1" else FIGURE5_PRESETS
-        colors = ["#d62728", "#2ca02c", "#1f77b4", "#9467bd"]
 
         info_items = [
-            html.Label(
+            html.H2(
                 f"{'Figure 1' if display_mode == 'figure1' else 'Figure 5'} Presets:",
                 className="section-label",
             )
         ]
 
         for idx, (label, p) in enumerate(presets.items()):
-            sv = x * (
-                1
-                + (
-                    p["ω"] * (p["δ₁"] * E ** p["γ₁"])
-                    - (1 - p["ω"]) * (p["δ₂"] * E ** p["γ₂"])
-                )
+            positive, negative = weighted_systems(
+                E, p["ω"], p["δ₁"], p["γ₁"], p["δ₂"], p["γ₂"]
             )
-            col = colors[idx % len(colors)]
+            sv = x * (1 + (positive - negative))
+            col = PROFILE_COLORS[idx % len(PROFILE_COLORS)]
             traces.append(
                 go.Scatter(
-                    x=E, y=sv, mode="lines", name=label, line=dict(color=col, width=4)
+                    x=E, y=sv, mode="lines", name=label, line=dict(color=col, width=3)
                 )
             )
 
             info_items.append(
                 html.Div(
-                    [
+                    className="profile",
+                    children=[
                         html.Div(
-                            [
-                                html.Span(
-                                    "● ",
-                                    style={
-                                        "color": col,
-                                        "fontSize": "18px",
-                                        "lineHeight": "1",
-                                        "marginRight": "8px",
-                                    },
-                                ),
-                                html.H5(
-                                    f"{label} Profile",
-                                    style={
-                                        "color": "#333",
-                                        "fontSize": "15px",
-                                        "margin": 0,
-                                    },
-                                ),
+                            className="profile-head",
+                            children=[
+                                html.Span("● ", style={"color": col}),
+                                html.H3(f"{label} Profile", className="profile-name"),
                             ],
-                            style={
-                                "display": "flex",
-                                "alignItems": "center",
-                                "marginBottom": "4px",
-                            },
                         ),
                         html.Div(
-                            f"x=1, ω={p['ω']:.3f}, δ₁={p['δ₁']:.3f}, γ₁={p['γ₁']:.3f}, δ₂={p['δ₂']:.3f}, γ₂={p['γ₂']:.3f}",
-                            className="stat-value",
-                            style={
-                                "fontSize": "12px",
-                                "color": "#666",
-                                "marginLeft": "22px",
-                            },
+                            mark_symbols(
+                                f"x=1, ω={p['ω']:.3f}, δ₁={p['δ₁']:.3f}, γ₁={p['γ₁']:.3f}, δ₂={p['δ₂']:.3f}, γ₂={p['γ₂']:.3f}"
+                            ),
+                            className="param-line",
                         ),
                     ],
-                    style={"marginBottom": "18px"},
                 )
             )
 
@@ -1013,7 +593,7 @@ def create_callback(param):
         return round(max(mn, min(mx, new_val)), 3)
 
 
-for p in ["ω", "δ₁", "γ₁", "δ₂", "γ₂"]:
+for p in PARAMS:
     create_callback(p)
 
 
@@ -1027,22 +607,7 @@ def toggle_modal(open_clicks, close_clicks, style):
     if not dash.callback_context.triggered:
         return style or {"display": "none"}
     is_open = style and style.get("display") == "block"
-    return (
-        {"display": "none"}
-        if is_open
-        else {
-            "display": "block",
-            "position": "fixed",
-            "zIndex": 1000,
-            "left": 0,
-            "top": 0,
-            "width": "100%",
-            "height": "100%",
-            "overflow": "auto",
-            "backgroundColor": "rgba(0,0,0,0.5)",
-            "backdropFilter": "blur(3px)",
-        }
-    )
+    return {"display": "none"} if is_open else {"display": "block"}
 
 
 if __name__ == "__main__":

@@ -6,7 +6,6 @@
 #   pip install -r requirements.txt
 # ============================================
 
-dash
-plotly
-numpy
-gunicorn
+dash==3.3.0
+plotly==6.5.0
+numpy==2.2.6
