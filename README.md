@@ -6,6 +6,8 @@ This repository contains the data and analysis scripts for the peer-reviewed pap
 
 Visit the project on the Open Science Framework (OSF) [here](https://osf.io/e3baz/).
 
+An interactive visualizer of the model proposed in the paper is available [here](https://przemyslawmarcowski.com/projects/dual-power), and its source is in `visualization/dual-power/`.
+
 ## Table of Contents
 
 - [Overview](#overview)
@@ -64,6 +66,12 @@ effort-choice-models/
 │   ├── plots/
 │   └── tables/
 │
+├── visualization/
+│   └── dual-power/
+│       ├── assets/
+│       ├── app.py
+│       └── requirements.txt
+│
 ├── preprocess_data.R
 ├── glmm_analysis.R
 ├── model_visualization.R
@@ -96,6 +104,9 @@ Summary of the directory structure:
 &nbsp;&nbsp;&nbsp;`tables/`: Contains generated results tables in CSV format.
 
 
+`visualization/`: Contains the interactive visualizer of the DPOWER model, a Dash application in `dual-power/` with its stylesheet and Python requirements.
+
+
 `*.R`: R scripts for data preprocessing, GLMM analysis, model cross-validation, model inference, model recovery, and behavioral task validation, located in the root directory.
 
 ## Installation
@@ -107,7 +118,7 @@ No installation is required beyond having R and the necessary libraries. To run 
 1. Clone this repository:
 
    ```
-   git clone [https://github.com/pmarcowski/effort-choice-models.git](https://github.com/pmarcowski/effort-choice-models.git)
+   git clone https://github.com/pmarcowski/effort-choice-models.git
    ```
 
 3. Navigate to the project directory:
@@ -166,7 +177,7 @@ The study compares several models of effort-based choice (defined in `models.R`)
 8. DPOWER (Dual-system Power Model) - our novel model
 
 The DPOWER model is defined as:
-$$sv(x) = x * [1 - \omega\delta_{1}E^{\gamma_{1}} + (1 - \omega)\delta_{2}E^{\gamma_{2}}]$$
+$$sv(x) = x * [1 + \omega\delta_{1}E^{\gamma_{1}} - (1 - \omega)\delta_{2}E^{\gamma_{2}}]$$
 
 Where:
 
