@@ -1,0 +1,14 @@
+# ============================================
+# requirements.txt  (Python 3.11)
+# Install:
+#   conda create -n <name> python=3.11
+#   conda activate <name>
+#   pip install -r requirements.txt
+# Render:
+#   python animate.py
+# ============================================
+
+numpy==2.2.6
+matplotlib==3.11.2
+pillow==12.3.0
+imageio-ffmpeg==0.6.0

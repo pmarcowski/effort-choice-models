@@ -6,7 +6,7 @@ This repository contains the data and analysis scripts for the peer-reviewed pap
 
 Visit the project on the Open Science Framework (OSF) [here](https://osf.io/e3baz/).
 
-An interactive visualizer of the model proposed in the paper is available [here](https://przemyslawmarcowski.com/projects/dual-power), and its source is in `visualization/dual-power/`.
+An interactive visualizer of the model proposed in the paper is available [here](https://przemyslawmarcowski.com/projects/dual-power), and its source is in `visualization/dual-power/`. An animation of the model's four effort preference profiles making the same sequence of choices is rendered by `visualization/profile-paths/`.
 
 ## Table of Contents
 
@@ -67,9 +67,18 @@ effort-choice-models/
 │   └── tables/
 │
 ├── visualization/
-│   └── dual-power/
-│       ├── assets/
-│       ├── app.py
+│   ├── dual-power/
+│   │   ├── assets/
+│   │   ├── app.py
+│   │   └── requirements.txt
+│   └── profile-paths/
+│       ├── animate.py
+│       ├── choose_seed.py
+│       ├── dual_power.py
+│       ├── ladder.py
+│       ├── scene.py
+│       ├── profile-paths.gif
+│       ├── profile-paths.mp4
 │       └── requirements.txt
 │
 ├── preprocess_data.R
@@ -104,7 +113,7 @@ Summary of the directory structure:
 &nbsp;&nbsp;&nbsp;`tables/`: Contains generated results tables in CSV format.
 
 
-`visualization/`: Contains the interactive visualizer of the DPOWER model, a Dash application in `dual-power/` with its stylesheet and Python requirements.
+`visualization/`: Contains the interactive visualizer of the DPOWER model, a Dash application in `dual-power/` with its stylesheet and Python requirements, and the profile animation in `profile-paths/`: four decision makers, one per effort preference profile, make the same 20 choices, each between two neighboring efforts in percent of maximum voluntary contraction (% MVC) for the same outcome. Each choice is sampled from the model's softmax rule, so a path wavers where its value function is flat and the paths part where their value functions turn; every step is labeled with the effort taken, beside a summary of the model, live results, each profile's value function, and how each decision maker values every path. `python animate.py` renders the MP4 (`--gif` also writes the GIF preview, `--dry-run` prints parameters and results, `--seed` draws other choices, `--deterministic` takes the option of higher value instead, `--profiles figure1` or `figure5` uses the published Figure 1 examples or the Figure 5b participant estimates, whose low fitted choice sensitivity makes their sampled paths noisy, `--choices` and `--max-mvc` set the ladder), and `python choose_seed.py` shows how the default draw was picked.
 
 
 `*.R`: R scripts for data preprocessing, GLMM analysis, model cross-validation, model inference, model recovery, and behavioral task validation, located in the root directory.
